@@ -48,8 +48,15 @@ fun CameraScreen() {
     val capabilities by controller.capabilities.collectAsStateWithLifecycle()
     val exposure by controller.exposure.state.collectAsStateWithLifecycle()
 
+    val subjects by controller.subjectDetector.subjects.collectAsStateWithLifecycle()
+
     val levelDetector = remember { LevelDetector(context.applicationContext) }
     val level by levelDetector.state.collectAsStateWithLifecycle()
+
+    // Release camera + ML Kit resources when this screen leaves composition for good.
+    DisposableEffect(controller) {
+        onDispose { controller.release() }
+    }
 
     // Register/unregister sensor listeners with the lifecycle to avoid leaking them.
     DisposableEffect(lifecycleOwner, levelDetector) {
@@ -83,6 +90,20 @@ fun CameraScreen() {
             modifier = Modifier.fillMaxSize(),
             factory = { previewView }
         )
+
+        // TEMP raw subject boxes (Phase-5 confirmation that detection works, before framing UI).
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            subjects.forEach { s ->
+                val l = s.box.left * size.width
+                val t = s.box.top * size.height
+                drawRect(
+                    color = if (s.kind.name == "FACE") Color(0xFF7DF9C6) else Color(0xFFFFC24B),
+                    topLeft = Offset(l, t),
+                    size = androidx.compose.ui.geometry.Size(s.box.width * size.width, s.box.height * size.height),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3f),
+                )
+            }
+        }
 
         // TEMP basic level line (replaced by the integrated edge indicator in the UI pass):
         // a center horizon line that rotates with device roll and turns accent when level.

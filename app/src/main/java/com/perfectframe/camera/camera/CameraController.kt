@@ -5,11 +5,14 @@ import android.content.Context
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
+import android.util.Size
 import androidx.annotation.OptIn as AndroidxOptIn
 import androidx.camera.camera2.interop.Camera2Interop
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
@@ -19,8 +22,11 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import com.perfectframe.camera.vision.SubjectDetector
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,14 +39,19 @@ import kotlinx.coroutines.suspendCancellableCoroutine
  *
  * Commit 2 adds [ImageCapture] configured for the largest resolution the HAL will expose
  * (high-resolution/sensor mode included, per spec §2 Phase 1), and reports the negotiated
- * [CameraCapabilities] so the UI can be honest about what was actually captured. Later passes
- * add ImageAnalysis (ML Kit) and the Camera2Interop exposure hooks through the same controller.
+ * [CameraCapabilities] so the UI can be honest about what was actually captured. Commit 5 adds
+ * the ML Kit [ImageAnalysis] path (throttled, KEEP_ONLY_LATEST so it never starves the preview),
+ * and the Camera2Interop exposure hooks all flow through this single controller.
  */
+@AndroidxOptIn(ExperimentalCamera2Interop::class, ExperimentalGetImage::class)
 class CameraController(private val appContext: Context) {
 
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
     private var camera: Camera? = null
+
+    // Single-threaded analysis pump so ML Kit work never runs on the main or camera threads.
+    private val analysisExecutor: ExecutorService = Executors.newSingleThreadExecutor()
 
     private val _capabilities = MutableStateFlow<CameraCapabilities?>(null)
     val capabilities: StateFlow<CameraCapabilities?> = _capabilities.asStateFlow()
@@ -48,8 +59,10 @@ class CameraController(private val appContext: Context) {
     /** Auto exposure/WB pipeline; its [ExposurePipeline.state] feeds the HUD. */
     val exposure = ExposurePipeline()
 
-    /** Binds Preview + ImageCapture to [previewView]'s surface for [lifecycleOwner]. */
-    @AndroidxOptIn(ExperimentalCamera2Interop::class)
+    /** On-device subject detector; its [SubjectDetector.subjects] feeds the composition engine. */
+    val subjectDetector = SubjectDetector()
+
+    /** Binds Preview + ImageCapture + ImageAnalysis to [previewView] for [lifecycleOwner]. */
     suspend fun bind(
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
@@ -84,16 +97,35 @@ class CameraController(private val appContext: Context) {
             .build()
         imageCapture = capture
 
+        // Analysis stream: a modest resolution is plenty for framing, and KEEP_ONLY_LATEST means
+        // slow ML Kit frames are dropped rather than queued — the preview never waits (spec §6).
+        val analysisResolution = ResolutionSelector.Builder()
+            .setResolutionStrategy(
+                ResolutionStrategy(
+                    Size(1280, 720),
+                    ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
+                )
+            )
+            .build()
+        val analysis = ImageAnalysis.Builder()
+            .setResolutionSelector(analysisResolution)
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
+            .build()
+            .also { it.setAnalyzer(analysisExecutor, subjectDetector) }
+
         val selector = CameraSelector.DEFAULT_BACK_CAMERA
 
         try {
             provider.unbindAll()
-            camera = provider.bindToLifecycle(lifecycleOwner, selector, preview, capture)
+            camera = provider.bindToLifecycle(
+                lifecycleOwner, selector, preview, capture, analysis
+            )
             camera?.cameraInfo?.let { info ->
                 _capabilities.value = CameraCapabilities.from(info)
                 exposure.learnLimits(info)
             }
-            Log.i(TAG, "Preview + ImageCapture bound to back camera.")
+            Log.i(TAG, "Preview + ImageCapture + ImageAnalysis bound to back camera.")
         } catch (t: Throwable) {
             Log.e(TAG, "Use-case binding failed", t)
         }
@@ -159,6 +191,13 @@ class CameraController(private val appContext: Context) {
         cameraProvider?.unbindAll()
         camera = null
         imageCapture = null
+    }
+
+    /** Fully release resources. Call when the owning composable leaves composition for good. */
+    fun release() {
+        unbind()
+        subjectDetector.close()
+        analysisExecutor.shutdown()
     }
 
     private suspend fun awaitCameraProvider(): ProcessCameraProvider =
