@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
@@ -53,6 +54,7 @@ fun ShutterBar(
     onCapture: () -> Unit,
     onOpenGallery: () -> Unit,
     onSwitchCamera: () -> Unit,
+    shutterEnabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -64,7 +66,7 @@ fun ShutterBar(
     ) {
         GalleryButton(lastCapture = lastCapture, onClick = onOpenGallery)
 
-        ShutterButton(isIdeal = isIdeal, onCapture = onCapture)
+        ShutterButton(isIdeal = isIdeal, enabled = shutterEnabled, onCapture = onCapture)
 
         GlassSurface(shape = CircleShape) {
             Box(
@@ -119,11 +121,13 @@ private fun GalleryButton(lastCapture: android.net.Uri?, onClick: () -> Unit) {
 @Composable
 private fun ShutterButton(
     isIdeal: Boolean,
+    enabled: Boolean,
     onCapture: () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val pressScale by animateFloatAsState(if (pressed) 0.92f else 1f, tween(90), label = "press")
+    val dim by animateFloatAsState(if (enabled) 1f else 0.35f, tween(200), label = "shutterDim")
 
     val ringColor by animateColorAsState(
         targetValue = if (isIdeal) Accent else TextPrimary,
@@ -143,14 +147,19 @@ private fun ShutterButton(
             .size(82.dp)
             .scale(pressScale)
             .clip(CircleShape)
-            .clickable(interactionSource = interaction, indication = null, onClick = onCapture),
+            .clickable(
+                interactionSource = interaction,
+                indication = null,
+                enabled = enabled,
+                onClick = onCapture,
+            ),
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(modifier = Modifier.size(82.dp)) {
+        Canvas(modifier = Modifier.size(82.dp).alpha(dim)) {
             val c = Offset(size.width / 2f, size.height / 2f)
             val outer = size.minDimension / 2f
 
-            if (isIdeal) {
+            if (isIdeal && enabled) {
                 drawCircle(
                     color = Accent.copy(alpha = 0.18f + 0.14f * (1f - glow)),
                     radius = outer * (0.98f + 0.06f * glow),

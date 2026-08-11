@@ -26,6 +26,7 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.perfectframe.camera.vision.SubjectDetector
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
@@ -227,6 +228,39 @@ class CameraController(private val appContext: Context) {
                 }
             )
         }
+    }
+
+    /**
+     * Captures a full-resolution still to a private cache file rather than shared storage. Used
+     * by pipelines that post-process the frame (auto-frame crop, film-look development) before
+     * anything reaches the user's gallery — so no unprocessed intermediate ever appears there.
+     * Caller owns deleting the file once done with it.
+     */
+    suspend fun captureToTempFile(): File? {
+        val capture = imageCapture ?: return null
+        val file = File(appContext.cacheDir, "pf_tmp_${System.currentTimeMillis()}.jpg")
+        val outputOptions = ImageCapture.OutputFileOptions.Builder(file).build()
+        return suspendCancellableCoroutine { cont ->
+            capture.takePicture(
+                outputOptions,
+                ContextCompat.getMainExecutor(appContext),
+                object : ImageCapture.OnImageSavedCallback {
+                    override fun onImageSaved(results: ImageCapture.OutputFileResults) {
+                        cont.resume(file)
+                    }
+                    override fun onError(exception: ImageCaptureException) {
+                        Log.e(TAG, "Temp capture failed", exception)
+                        cont.resume(null)
+                    }
+                }
+            )
+        }
+    }
+
+    /** Records a capture that happened outside [capture] (e.g. after post-processing) so the
+     *  gallery-thumbnail button in the shutter bar still reflects the latest photo. */
+    fun noteExternalCapture(uri: android.net.Uri) {
+        _lastCapture.value = uri
     }
 
     /**

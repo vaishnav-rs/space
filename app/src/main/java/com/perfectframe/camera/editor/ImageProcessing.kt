@@ -71,7 +71,7 @@ private fun decodeCapped(context: Context, uri: Uri): Bitmap? = runCatching {
     }
 }.onFailure { Log.e(TAG, "decode failed", it) }.getOrNull()
 
-private fun writeJpeg(context: Context, bitmap: Bitmap): Uri? {
+internal fun writeJpeg(context: Context, bitmap: Bitmap): Uri? {
     val name = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(System.currentTimeMillis())
     val values = ContentValues().apply {
         put(MediaStore.MediaColumns.DISPLAY_NAME, "PF_edit_$name.jpg")

@@ -35,10 +35,21 @@ No accounts, no network, no cloud. All vision runs on-device.
   Cross-process, Sepia, Tri-X / HP5 / Noir B&W). Live preview and export share the exact same
   `ColorMatrix`, so what you see is what's saved (as a new file). These are honest colour-science
   approximations — not literal recreations of any trademarked stock.
-- **Tap-to-autoframe.** Tap inside the suggested frame and the camera digitally zooms into that
-  composition and auto-captures — hit the good shot without moving.
-- **Front/back switch** and a GCam-*inspired* layout (top control row, zoom pill, mode label,
-  bottom gallery · shutter · flip row).
+- **Front/back switch** and a GCam-*inspired* layout (top control row, zoom pill, bottom
+  gallery · shutter · flip row).
+
+## Two shooting modes
+
+- **Frameica** — the smart autoframer. Tap *inside* the suggested frame and the final saved photo
+  is cropped to exactly that composition, straightened level, auto-toned, and finished with a
+  clean look. The result shows only the perfect frame — not the wider scene it was taken from.
+  Post-processing runs on a private temp capture, so no unprocessed intermediate ever reaches the
+  gallery.
+- **Film** — a skeuomorphic ritual. Load a stock from a shelf of original film-inspired boxes
+  (generic names like "Sunset 200" / "Mono 400" — not literal recreations of any trademarked
+  stock), shoot, wind on, and wait through a real ~30-second develop — the shot stays hidden until
+  it's "developed," matching the honesty stance: no cheating the wait. No autoframing here; a real
+  camera doesn't reframe for you. The frame counter tracks a 24-exposure roll.
 
 ## Design principles
 
