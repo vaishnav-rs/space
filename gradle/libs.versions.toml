@@ -52,7 +52,7 @@ androidx-camera-view = { group = "androidx.camera", name = "camera-view", versio
 
 # ML Kit (bundled on-device models)
 mlkit-face-detection = { group = "com.google.mlkit", name = "face-detection", version.ref = "mlkitFaceDetection" }
-mlkit-object-detection = { group = "com.google.mlkit", name = "object-detection", version.ref = "mlkitObjectDetection" }
+mlkit-objdetection = { group = "com.google.mlkit", name = "object-detection", version.ref = "mlkitObjectDetection" }
 
 # Coroutines
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }

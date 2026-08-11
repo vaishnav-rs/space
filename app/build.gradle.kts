@@ -75,7 +75,7 @@ dependencies {
 
     // ML Kit — bundled on-device models, no network
     implementation(libs.mlkit.face.detection)
-    implementation(libs.mlkit.object.detection)
+    implementation(libs.mlkit.objdetection)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
