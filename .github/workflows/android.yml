@@ -9,6 +9,11 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish the APK under (creates the tag + release)"
+        default: "v1.0.0"
+        required: true
 
 concurrency:
   group: android-${{ github.ref }}
@@ -60,12 +65,21 @@ jobs:
   release:
     name: Publish APK to Releases
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: write
     steps:
+      - name: Resolve release tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Download built APK
         uses: actions/download-artifact@v4
         with:
@@ -75,7 +89,7 @@ jobs:
       - name: Rename APK with version tag
         run: |
           mkdir -p dist
-          cp apk/*.apk "dist/PerfectFrame-${GITHUB_REF_NAME}.apk"
+          cp apk/*.apk "dist/PerfectFrame-${{ steps.tag.outputs.tag }}.apk"
           ls -la dist
 
       - name: Publish GitHub Release
@@ -83,8 +97,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            "dist/PerfectFrame-${GITHUB_REF_NAME}.apk" \
-            --title "PerfectFrame ${GITHUB_REF_NAME}" \
-            --prerelease \
-            --notes "Debug-signed APK built by CI (installable directly). On-device camera with rule-of-thirds framing guidance, level horizon, and legible auto-exposure."
+          TAG="${{ steps.tag.outputs.tag }}"
+          # Create the tag + release from this commit if it doesn't exist yet; otherwise just
+          # (re)upload the APK asset so re-runs are idempotent.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "dist/PerfectFrame-${TAG}.apk" --clobber
+          else
+            gh release create "$TAG" \
+              "dist/PerfectFrame-${TAG}.apk" \
+              --target "${GITHUB_SHA}" \
+              --title "PerfectFrame ${TAG}" \
+              --prerelease \
+              --notes "Debug-signed APK built by CI (installable directly). On-device camera with rule-of-thirds framing guidance, level horizon, and legible auto-exposure."
+          fi
