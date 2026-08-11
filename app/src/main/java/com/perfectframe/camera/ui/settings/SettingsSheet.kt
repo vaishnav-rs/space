@@ -111,8 +111,10 @@ private fun EvRow(
         return
     }
     val range = exposureState.exposureCompensationRange
-    val step = exposureState.exposureCompensationStep.doubleValue()
-    val ev = settings.evIndex * step
+    val stepRational = exposureState.exposureCompensationStep
+    // Rational lacks a stable doubleValue() accessor across the compile SDK, so derive it.
+    val step = stepRational.numerator.toDouble() / stepRational.denominator.toDouble()
+    val ev: Double = settings.evIndex * step
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
