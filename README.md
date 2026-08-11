@@ -30,6 +30,15 @@ No accounts, no network, no cloud. All vision runs on-device.
 - **Tap to focus.** Tap anywhere to drive focus + metering, with a brief focus ring.
 - **In-app gallery.** Browse the shots you captured in a grid, swipe through them full-screen, and
   share — reading only the app's own photos (no broad storage permission on modern Android).
+- **Non-destructive editor.** Open any shot and adjust exposure / contrast / saturation / warmth /
+  tint, rotate, and apply film-*inspired* looks (Gold, Portrait, Chrome, Vivid, Cinematic, Faded,
+  Cross-process, Sepia, Tri-X / HP5 / Noir B&W). Live preview and export share the exact same
+  `ColorMatrix`, so what you see is what's saved (as a new file). These are honest colour-science
+  approximations — not literal recreations of any trademarked stock.
+- **Tap-to-autoframe.** Tap inside the suggested frame and the camera digitally zooms into that
+  composition and auto-captures — hit the good shot without moving.
+- **Front/back switch** and a GCam-*inspired* layout (top control row, zoom pill, mode label,
+  bottom gallery · shutter · flip row).
 
 ## Design principles
 

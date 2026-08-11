@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Icon
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
+import com.perfectframe.camera.editor.EditorScreen
 import com.perfectframe.camera.ui.theme.Accent
 import com.perfectframe.camera.ui.theme.Surface0
 import com.perfectframe.camera.ui.theme.TextPrimary
@@ -82,7 +84,8 @@ fun GalleryScreen(onClose: () -> Unit) {
 
     var images by remember { mutableStateOf<List<GalleryImage>>(emptyList()) }
     var loaded by remember { mutableStateOf(false) }
-    LaunchedEffect(granted) {
+    var refreshKey by remember { mutableStateOf(0) }
+    LaunchedEffect(granted, refreshKey) {
         if (granted) {
             images = loadPerfectFrameImages(context)
             loaded = true
@@ -90,6 +93,7 @@ fun GalleryScreen(onClose: () -> Unit) {
     }
 
     var viewerIndex by remember { mutableStateOf<Int?>(null) }
+    var editing by remember { mutableStateOf<Uri?>(null) }
 
     Box(
         modifier = Modifier
@@ -131,6 +135,19 @@ fun GalleryScreen(onClose: () -> Unit) {
                 startIndex = start,
                 onClose = { viewerIndex = null },
                 onShare = { uri -> shareImage(context, uri) },
+                onEdit = { uri -> editing = uri },
+            )
+        }
+
+        editing?.let { uri ->
+            EditorScreen(
+                imageUri = uri,
+                onClose = { editing = null },
+                onSaved = {
+                    editing = null
+                    viewerIndex = null
+                    refreshKey++
+                },
             )
         }
     }
@@ -161,6 +178,7 @@ private fun PhotoViewer(
     startIndex: Int,
     onClose: () -> Unit,
     onShare: (Uri) -> Unit,
+    onEdit: (Uri) -> Unit,
 ) {
     val pagerState = rememberPagerState(initialPage = startIndex, pageCount = { images.size })
     Box(
@@ -185,8 +203,13 @@ private fun PhotoViewer(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CircleIconButton(Icons.Rounded.ArrowBack, "Back", onClose)
-            CircleIconButton(Icons.Rounded.Share, "Share") {
-                images.getOrNull(pagerState.currentPage)?.let { onShare(it.uri) }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                CircleIconButton(Icons.Rounded.Edit, "Edit") {
+                    images.getOrNull(pagerState.currentPage)?.let { onEdit(it.uri) }
+                }
+                CircleIconButton(Icons.Rounded.Share, "Share") {
+                    images.getOrNull(pagerState.currentPage)?.let { onShare(it.uri) }
+                }
             }
         }
     }

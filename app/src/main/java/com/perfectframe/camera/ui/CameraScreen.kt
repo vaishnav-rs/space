@@ -6,17 +6,25 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -25,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,7 +45,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -46,6 +57,7 @@ import com.perfectframe.camera.camera.CameraController
 import com.perfectframe.camera.composition.CompositionEngine
 import com.perfectframe.camera.gallery.GalleryScreen
 import com.perfectframe.camera.sensors.LevelDetector
+import com.perfectframe.camera.ui.components.GlassSurface
 import com.perfectframe.camera.ui.controls.AspectRatioSelector
 import com.perfectframe.camera.ui.controls.ZoomBar
 import com.perfectframe.camera.ui.hud.GuidanceBar
@@ -57,15 +69,15 @@ import com.perfectframe.camera.ui.overlay.ThirdsGrid
 import com.perfectframe.camera.ui.settings.SettingsSheet
 import com.perfectframe.camera.ui.settings.ViewfinderSettings
 import com.perfectframe.camera.ui.theme.Accent
+import com.perfectframe.camera.ui.theme.TextPrimary
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * The single camera screen (spec §3), now WYSIWYG: the viewfinder is letterboxed to the selected
- * capture aspect ratio so what you frame is exactly what's saved. Overlays (framing, horizon,
- * grid, focus ring) live inside that preview box; chrome (HUD, aspect + zoom controls, coaching,
- * shutter) sits in the letterbox margins. Pinch to zoom, tap to focus, and the shutter-bar
- * thumbnail opens the in-app gallery.
+ * The single camera screen. GCam-*inspired* layout: a top control row (settings + aspect), the
+ * WYSIWYG letterboxed viewfinder with overlays, a zoom pill, a mode label, and the bottom shutter
+ * row (gallery · shutter · flip). Pinch to zoom, tap to focus — and tap *inside the suggested
+ * frame* to digitally zoom into that composition and auto-capture.
  */
 @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
 @Composable
@@ -92,7 +104,7 @@ fun CameraScreen() {
     var aspect by remember { mutableStateOf(controller.currentAspect()) }
     var focusPoint by remember { mutableStateOf<Offset?>(null) }
 
-    val levelTolerance = if (settings.strictLevel) 0.7f else 1.5f
+    val levelTolerance = if (settings.strictLevel) 1.5f else 3.0f
     LaunchedEffect(levelTolerance) { levelDetector.setTolerance(levelTolerance) }
 
     val frame by remember(levelTolerance) {
@@ -100,6 +112,10 @@ fun CameraScreen() {
     }
     val showFrame = settings.showGuidance && engine.shouldShow(frame)
     val primarySubject = remember(subjects) { subjects.maxByOrNull { it.prominence }?.box }
+
+    // Latest values readable from inside the gesture callbacks (captured once by pointerInput).
+    val frameState = rememberUpdatedState(frame)
+    val showFrameState = rememberUpdatedState(showFrame)
 
     var wasIdeal by remember { mutableStateOf(false) }
     LaunchedEffect(frame.isIdeal) {
@@ -157,7 +173,6 @@ fun CameraScreen() {
         ) {
             AndroidView(modifier = Modifier.fillMaxSize(), factory = { previewView })
 
-            // Gesture layer: pinch to zoom, tap to focus.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -174,6 +189,23 @@ fun CameraScreen() {
                                 FocusMeteringAction.Builder(point).build(),
                             )
                             focusPoint = offset
+
+                            // Tap inside the suggested frame → zoom into it and auto-capture.
+                            val f = frameState.value
+                            val box = f.box
+                            val w = size.width.toFloat()
+                            val h = size.height.toFloat()
+                            val inside = showFrameState.value &&
+                                offset.x in (box.left * w)..(box.right * w) &&
+                                offset.y in (box.top * h)..(box.bottom * h)
+                            if (inside) {
+                                val fill = 1f / box.width.coerceIn(0.25f, 1f)
+                                scope.launch {
+                                    controller.setZoomRatio(controller.zoom.value.ratio * fill)
+                                    delay(550)
+                                    capture()
+                                }
+                            }
                         }
                     },
             )
@@ -194,28 +226,47 @@ fun CameraScreen() {
             FocusRing(focusPoint = focusPoint, onFinished = { focusPoint = null })
         }
 
-        // ---- Top: metadata HUD + aspect selector ---------------------------------------------
+        // ---- Top chrome: settings + aspect, then the metadata HUD ----------------------------
         Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .statusBarsPadding()
-                .padding(top = 12.dp, start = 16.dp, end = 16.dp),
+                .padding(top = 10.dp, start = 16.dp, end = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                GlassSurface(shape = CircleShape) {
+                    Box(
+                        modifier = Modifier.size(44.dp).clickable { showSettings = true },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Settings,
+                            contentDescription = "Settings",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                }
+                AspectRatioSelector(current = aspect, onSelect = { aspect = it })
+            }
             MetadataHud(exposure = exposure, capabilities = capabilities)
-            AspectRatioSelector(current = aspect, onSelect = { aspect = it })
         }
 
-        // ---- Bottom: coaching + zoom + shutter -----------------------------------------------
+        // ---- Bottom chrome: coaching, zoom, mode label, shutter row --------------------------
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(bottom = 22.dp),
+                .padding(bottom = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             GuidanceBar(
                 frame = frame,
@@ -223,12 +274,18 @@ fun CameraScreen() {
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
             )
             ZoomBar(zoom = zoom, onJump = { controller.jumpToZoom(it) })
+            Text(
+                text = "PHOTO",
+                color = Accent,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+            )
             ShutterBar(
                 isIdeal = frame.isIdeal,
                 lastCapture = lastCapture,
                 onCapture = { capture() },
-                onOpenSettings = { showSettings = true },
                 onOpenGallery = { showGallery = true },
+                onSwitchCamera = { scope.launch { controller.switchCamera() } },
                 modifier = Modifier.fillMaxWidth(),
             )
         }

@@ -76,7 +76,7 @@ fun SettingsSheet(
             ToggleRow("Horizon level", settings.showHorizon) {
                 onChange(settings.copy(showHorizon = it))
             }
-            ToggleRow("Strict level (±0.7°)", settings.strictLevel) {
+            ToggleRow("Strict level (±1.5°)", settings.strictLevel) {
                 onChange(settings.copy(strictLevel = it))
             }
 

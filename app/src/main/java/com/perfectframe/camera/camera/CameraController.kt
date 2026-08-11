@@ -60,6 +60,9 @@ class CameraController(private val appContext: Context) {
     // Selected capture aspect ratio (drives preview/analysis/capture so they stay WYSIWYG).
     private var aspect: AspectRatioOption = AspectRatioOption.RATIO_4_3
 
+    // Front/back lens; toggled by switchCamera() with a transparent rebind.
+    private var lensFacing: Int = CameraSelector.LENS_FACING_BACK
+
     // Live zoom capabilities/value, mirrored from CameraX's ZoomState LiveData.
     private val _zoom = MutableStateFlow(ZoomInfo())
     val zoom: StateFlow<ZoomInfo> = _zoom.asStateFlow()
@@ -140,7 +143,7 @@ class CameraController(private val appContext: Context) {
             .build()
             .also { it.setAnalyzer(analysisExecutor, subjectDetector) }
 
-        val selector = CameraSelector.DEFAULT_BACK_CAMERA
+        val selector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
 
         try {
             // Detach any prior zoom observer before the old camera is unbound.
@@ -277,6 +280,20 @@ class CameraController(private val appContext: Context) {
     // --- Aspect ratio -------------------------------------------------------------------------
 
     fun currentAspect(): AspectRatioOption = aspect
+
+    fun isFrontFacing(): Boolean = lensFacing == CameraSelector.LENS_FACING_FRONT
+
+    /** Flip between the back and front cameras, rebinding the use-case graph. */
+    suspend fun switchCamera() {
+        lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
+            CameraSelector.LENS_FACING_FRONT
+        } else {
+            CameraSelector.LENS_FACING_BACK
+        }
+        val owner = boundLifecycleOwner
+        val view = boundPreviewView
+        if (owner != null && view != null) bind(owner, view)
+    }
 
     /** Change the capture aspect ratio; transparently rebinds the use-case graph. */
     suspend fun setAspect(option: AspectRatioOption) {

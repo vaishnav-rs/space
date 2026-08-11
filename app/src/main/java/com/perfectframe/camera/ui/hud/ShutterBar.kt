@@ -20,8 +20,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.FlipCameraAndroid
 import androidx.compose.material.icons.rounded.PhotoLibrary
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
@@ -51,8 +51,8 @@ fun ShutterBar(
     isIdeal: Boolean,
     lastCapture: android.net.Uri?,
     onCapture: () -> Unit,
-    onOpenSettings: () -> Unit,
     onOpenGallery: () -> Unit,
+    onSwitchCamera: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -62,25 +62,25 @@ fun ShutterBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
+        GalleryButton(lastCapture = lastCapture, onClick = onOpenGallery)
+
+        ShutterButton(isIdeal = isIdeal, onCapture = onCapture)
+
         GlassSurface(shape = CircleShape) {
             Box(
                 modifier = Modifier
                     .size(52.dp)
-                    .clickable(onClick = onOpenSettings),
+                    .clickable(onClick = onSwitchCamera),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.Settings,
-                    contentDescription = "Settings",
+                    imageVector = Icons.Rounded.FlipCameraAndroid,
+                    contentDescription = "Switch camera",
                     tint = TextPrimary,
                     modifier = Modifier.size(24.dp),
                 )
             }
         }
-
-        ShutterButton(isIdeal = isIdeal, onCapture = onCapture)
-
-        GalleryButton(lastCapture = lastCapture, onClick = onOpenGallery)
     }
 }
 

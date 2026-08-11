@@ -30,11 +30,12 @@ class CompositionEngine(
         val maxCropScale: Float = 1.0f,
         /** Yaw magnitude (deg) beyond which we allocate lead room in the facing direction. */
         val facingYawThreshold: Float = 12f,
-        /** Confidence at/above which the UI shows the box. */
-        val showThreshold: Float = 0.55f,
-        /** Confidence at/above which framing is celebrated as "ideal". */
-        val idealThreshold: Float = 0.74f,
-        val nudgeMargin: Float = 0.06f,
+        /** Confidence at/above which the UI shows the box. Kept low so guidance appears readily. */
+        val showThreshold: Float = 0.45f,
+        /** Confidence at/above which framing is celebrated as "ideal". Forgiving on purpose. */
+        val idealThreshold: Float = 0.62f,
+        /** Larger margin ⇒ small offsets don't trigger nudges (fewer nags). */
+        val nudgeMargin: Float = 0.1f,
     )
 
     /**

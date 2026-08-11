@@ -100,7 +100,7 @@ class LevelDetector(
     }
 
     companion object {
-        private const val DEFAULT_TOLERANCE_DEG = 1.5f
+        private const val DEFAULT_TOLERANCE_DEG = 3.0f
         private const val ALPHA = 0.2f
     }
 }
