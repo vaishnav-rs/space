@@ -6,6 +6,7 @@ name: Android CI
 on:
   push:
     branches: ["**"]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -52,3 +53,38 @@ jobs:
           name: unit-test-reports
           path: app/build/reports/tests/
           if-no-files-found: ignore
+
+  # Publishes the debug APK to a GitHub Release when a v* tag is pushed. Debug (not release) is
+  # deliberate: the release build has no signing config, so an unsigned release APK can't be
+  # installed — the debug APK is debug-signed and installable straight off the Releases page.
+  release:
+    name: Publish APK to Releases
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download built APK
+        uses: actions/download-artifact@v4
+        with:
+          name: perfectframe-debug-apk
+          path: apk
+
+      - name: Rename APK with version tag
+        run: |
+          mkdir -p dist
+          cp apk/*.apk "dist/PerfectFrame-${GITHUB_REF_NAME}.apk"
+          ls -la dist
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            "dist/PerfectFrame-${GITHUB_REF_NAME}.apk" \
+            --title "PerfectFrame ${GITHUB_REF_NAME}" \
+            --prerelease \
+            --notes "Debug-signed APK built by CI (installable directly). On-device camera with rule-of-thirds framing guidance, level horizon, and legible auto-exposure."
