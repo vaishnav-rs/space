@@ -12,12 +12,15 @@ import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
+import androidx.camera.core.ZoomState
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
+import androidx.lifecycle.Observer
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
@@ -50,9 +53,21 @@ class CameraController(private val appContext: Context) {
     private var imageCapture: ImageCapture? = null
     private var camera: Camera? = null
 
-    // Remembered so manual-override changes (AE lock) can transparently rebind the use cases.
+    // Remembered so manual-override / aspect changes can transparently rebind the use cases.
     private var boundLifecycleOwner: LifecycleOwner? = null
     private var boundPreviewView: PreviewView? = null
+
+    // Selected capture aspect ratio (drives preview/analysis/capture so they stay WYSIWYG).
+    private var aspect: AspectRatioOption = AspectRatioOption.RATIO_4_3
+
+    // Live zoom capabilities/value, mirrored from CameraX's ZoomState LiveData.
+    private val _zoom = MutableStateFlow(ZoomInfo())
+    val zoom: StateFlow<ZoomInfo> = _zoom.asStateFlow()
+    private var zoomObserver: Observer<ZoomState>? = null
+
+    // The most recent capture, so the shutter bar can show a thumbnail that opens the gallery.
+    private val _lastCapture = MutableStateFlow<android.net.Uri?>(null)
+    val lastCapture: StateFlow<android.net.Uri?> = _lastCapture.asStateFlow()
 
     // Single-threaded analysis pump so ML Kit work never runs on the main or camera threads.
     private val analysisExecutor: ExecutorService = Executors.newSingleThreadExecutor()
@@ -78,6 +93,9 @@ class CameraController(private val appContext: Context) {
 
         // Build Preview with Camera2 interop: drive AE/AWB and read back live metadata per frame.
         val previewBuilder = Preview.Builder()
+            .setResolutionSelector(
+                ResolutionSelector.Builder().setAspectRatioStrategy(aspect.strategy).build()
+            )
         Camera2Interop.Extender(previewBuilder).apply {
             exposure.applyTo(this)
             setSessionCaptureCallback(exposure.captureCallback)
@@ -91,6 +109,7 @@ class CameraController(private val appContext: Context) {
         // mode / burst) output sizes on devices that expose them — this is what reaches for the
         // 200MP mode. If the HAL caps us lower, capabilities reporting says so honestly.
         val resolutionSelector = ResolutionSelector.Builder()
+            .setAspectRatioStrategy(aspect.strategy)
             .setAllowedResolutionMode(
                 ResolutionSelector.PREFER_HIGHER_RESOLUTION_OVER_CAPTURE_RATE
             )
@@ -106,6 +125,7 @@ class CameraController(private val appContext: Context) {
         // Analysis stream: a modest resolution is plenty for framing, and KEEP_ONLY_LATEST means
         // slow ML Kit frames are dropped rather than queued — the preview never waits (spec §6).
         val analysisResolution = ResolutionSelector.Builder()
+            .setAspectRatioStrategy(aspect.strategy)
             .setResolutionStrategy(
                 ResolutionStrategy(
                     Size(1280, 720),
@@ -123,6 +143,8 @@ class CameraController(private val appContext: Context) {
         val selector = CameraSelector.DEFAULT_BACK_CAMERA
 
         try {
+            // Detach any prior zoom observer before the old camera is unbound.
+            zoomObserver?.let { obs -> camera?.cameraInfo?.zoomState?.removeObserver(obs) }
             provider.unbindAll()
             camera = provider.bindToLifecycle(
                 lifecycleOwner, selector, preview, capture, analysis
@@ -130,6 +152,16 @@ class CameraController(private val appContext: Context) {
             camera?.cameraInfo?.let { info ->
                 _capabilities.value = CameraCapabilities.from(info)
                 exposure.learnLimits(info)
+                val obs = Observer<ZoomState> { zs ->
+                    _zoom.value = ZoomInfo(
+                        minRatio = zs.minZoomRatio,
+                        maxRatio = zs.maxZoomRatio,
+                        ratio = zs.zoomRatio,
+                        linear = zs.linearZoom,
+                    )
+                }
+                info.zoomState.observeForever(obs)
+                zoomObserver = obs
             }
             Log.i(TAG, "Preview + ImageCapture + ImageAnalysis bound to back camera.")
         } catch (t: Throwable) {
@@ -181,6 +213,7 @@ class CameraController(private val appContext: Context) {
                             "Captured → $uri (${bytes ?: "?"} bytes) at " +
                                 "${_capabilities.value?.maxJpegSize}"
                         )
+                        _lastCapture.value = uri
                         cont.resume(CaptureResult.Saved(uri, bytes))
                     }
 
@@ -219,7 +252,44 @@ class CameraController(private val appContext: Context) {
         if (owner != null && view != null) bind(owner, view)
     }
 
+    // --- Zoom ---------------------------------------------------------------------------------
+
+    /** Set an absolute zoom ratio, clamped to the sensor's supported range. */
+    fun setZoomRatio(ratio: Float) {
+        val z = _zoom.value
+        runCatching { camera?.cameraControl?.setZoomRatio(ratio.coerceIn(z.minRatio, z.maxRatio)) }
+    }
+
+    /** Multiply the current zoom (pinch gestures report a scale factor). */
+    fun scaleZoom(factor: Float) {
+        setZoomRatio(_zoom.value.ratio * factor)
+    }
+
+    /** Snap to one of the quick-zoom stops shown in the UI. */
+    fun jumpToZoom(ratio: Float) = setZoomRatio(ratio)
+
+    // --- Tap to focus -------------------------------------------------------------------------
+
+    fun startFocusAndMetering(action: FocusMeteringAction) {
+        runCatching { camera?.cameraControl?.startFocusAndMetering(action) }
+    }
+
+    // --- Aspect ratio -------------------------------------------------------------------------
+
+    fun currentAspect(): AspectRatioOption = aspect
+
+    /** Change the capture aspect ratio; transparently rebinds the use-case graph. */
+    suspend fun setAspect(option: AspectRatioOption) {
+        if (option == aspect) return
+        aspect = option
+        val owner = boundLifecycleOwner
+        val view = boundPreviewView
+        if (owner != null && view != null) bind(owner, view)
+    }
+
     fun unbind() {
+        zoomObserver?.let { obs -> camera?.cameraInfo?.zoomState?.removeObserver(obs) }
+        zoomObserver = null
         cameraProvider?.unbindAll()
         camera = null
         imageCapture = null

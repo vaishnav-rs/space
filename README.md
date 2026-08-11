@@ -24,6 +24,12 @@ No accounts, no network, no cloud. All vision runs on-device.
 - **One honest manual override.** Everything is automatic by default; the single settings sheet
   offers EV compensation and an AE/AWB lock. Aperture is never a control because it is physically
   fixed — no fake dials.
+- **Zoom.** Pinch-to-zoom plus quick-stop chips (1× / 2× / max), clamped to the sensor's real range.
+- **Aspect ratio.** Switch between 4:3 and 16:9; the preview letterboxes so the viewfinder is
+  exactly what gets saved (WYSIWYG), and preview/analysis/capture stay aligned.
+- **Tap to focus.** Tap anywhere to drive focus + metering, with a brief focus ring.
+- **In-app gallery.** Browse the shots you captured in a grid, swipe through them full-screen, and
+  share — reading only the app's own photos (no broad storage permission on modern Android).
 
 ## Design principles
 

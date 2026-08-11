@@ -80,6 +80,9 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
 
+    // Image loading for the in-app gallery
+    implementation(libs.coil.compose)
+
     // Unit tests (JVM) — CompositionEngine is pure Kotlin and testable off-device
     testImplementation(libs.junit)
 

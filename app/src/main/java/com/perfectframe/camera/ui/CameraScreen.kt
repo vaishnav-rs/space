@@ -1,9 +1,17 @@
 package com.perfectframe.camera.ui
 
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -21,8 +29,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
@@ -33,7 +44,10 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.perfectframe.camera.camera.CameraController
 import com.perfectframe.camera.composition.CompositionEngine
+import com.perfectframe.camera.gallery.GalleryScreen
 import com.perfectframe.camera.sensors.LevelDetector
+import com.perfectframe.camera.ui.controls.AspectRatioSelector
+import com.perfectframe.camera.ui.controls.ZoomBar
 import com.perfectframe.camera.ui.hud.GuidanceBar
 import com.perfectframe.camera.ui.hud.MetadataHud
 import com.perfectframe.camera.ui.hud.ShutterBar
@@ -42,17 +56,16 @@ import com.perfectframe.camera.ui.overlay.HorizonIndicator
 import com.perfectframe.camera.ui.overlay.ThirdsGrid
 import com.perfectframe.camera.ui.settings.SettingsSheet
 import com.perfectframe.camera.ui.settings.ViewfinderSettings
+import com.perfectframe.camera.ui.theme.Accent
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * The single screen (spec §3): a full-bleed viewfinder with everything drawn on top — top
- * metadata HUD, the framing overlay + horizon level in the centre, coaching just above the
- * shutter bar. No navigation, no tabs; the one settings sheet slides up over this.
- *
- * The [CompositionEngine] runs here off the live subject + level state and produces the
- * [com.perfectframe.camera.composition.PerfectFrame] that every overlay reads. Crossing "ideal"
- * fires a single haptic tick; capturing flashes the screen — the two moments of tactile feedback
- * that make the experience feel like a real camera.
+ * The single camera screen (spec §3), now WYSIWYG: the viewfinder is letterboxed to the selected
+ * capture aspect ratio so what you frame is exactly what's saved. Overlays (framing, horizon,
+ * grid, focus ring) live inside that preview box; chrome (HUD, aspect + zoom controls, coaching,
+ * shutter) sits in the letterbox margins. Pinch to zoom, tap to focus, and the shutter-bar
+ * thumbnail opens the in-app gallery.
  */
 @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
 @Composable
@@ -70,31 +83,33 @@ fun CameraScreen() {
     val exposure by controller.exposure.state.collectAsStateWithLifecycle()
     val subjects by controller.subjectDetector.subjects.collectAsStateWithLifecycle()
     val level by levelDetector.state.collectAsStateWithLifecycle()
+    val zoom by controller.zoom.collectAsStateWithLifecycle()
+    val lastCapture by controller.lastCapture.collectAsStateWithLifecycle()
 
     var settings by remember { mutableStateOf(ViewfinderSettings()) }
     var showSettings by remember { mutableStateOf(false) }
+    var showGallery by remember { mutableStateOf(false) }
+    var aspect by remember { mutableStateOf(controller.currentAspect()) }
+    var focusPoint by remember { mutableStateOf<Offset?>(null) }
 
     val levelTolerance = if (settings.strictLevel) 0.7f else 1.5f
     LaunchedEffect(levelTolerance) { levelDetector.setTolerance(levelTolerance) }
 
-    // The live composition verdict, recomputed whenever subjects or the horizon change.
     val frame by remember(levelTolerance) {
         derivedStateOf { engine.compute(subjects, level.rollDegrees, levelTolerance) }
     }
     val showFrame = settings.showGuidance && engine.shouldShow(frame)
     val primarySubject = remember(subjects) { subjects.maxByOrNull { it.prominence }?.box }
 
-    // Fire one haptic tick on the rising edge of "ideal".
     var wasIdeal by remember { mutableStateOf(false) }
     LaunchedEffect(frame.isIdeal) {
         if (frame.isIdeal && !wasIdeal) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
         wasIdeal = frame.isIdeal
     }
 
-    // Shutter flash.
     val flash = remember { Animatable(0f) }
 
-    // Push manual-exposure overrides down to the camera when they change.
+    LaunchedEffect(aspect) { controller.setAspect(aspect) }
     LaunchedEffect(settings.exposureLocked) { controller.setExposureLocked(settings.exposureLocked) }
     LaunchedEffect(settings.evIndex) { controller.setExposureCompensationIndex(settings.evIndex) }
 
@@ -126,67 +141,104 @@ fun CameraScreen() {
     fun capture() {
         scope.launch {
             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-            launch { flash.snapTo(0.85f); flash.animateTo(0f, androidx.compose.animation.core.tween(360)) }
+            launch { flash.snapTo(0.85f); flash.animateTo(0f, tween(360)) }
             controller.capture()
         }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        AndroidView(modifier = Modifier.fillMaxSize(), factory = { previewView })
 
-        // Framing overlay + horizon occupy the whole viewfinder.
-        FramingOverlay(
-            frame = frame,
-            subjectBox = if (settings.showGuidance) primarySubject else null,
-            show = showFrame,
-            modifier = Modifier.fillMaxSize(),
-        )
-        if (settings.showHorizon) {
-            HorizonIndicator(level = level, modifier = Modifier.fillMaxSize())
-        }
-        // Reuse the framing grid gate for a full-frame grid when guidance is off but grid is on.
-        if (settings.showGrid && !showFrame) {
-            ThirdsGrid(modifier = Modifier.fillMaxSize())
+        // ---- Letterboxed WYSIWYG preview + overlays ------------------------------------------
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth()
+                .aspectRatio(aspect.previewAspect),
+        ) {
+            AndroidView(modifier = Modifier.fillMaxSize(), factory = { previewView })
+
+            // Gesture layer: pinch to zoom, tap to focus.
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, _, zoomChange, _ ->
+                            if (zoomChange != 1f) controller.scaleZoom(zoomChange)
+                        }
+                    }
+                    .pointerInput(Unit) {
+                        detectTapGestures { offset ->
+                            val point = previewView.meteringPointFactory
+                                .createPoint(offset.x, offset.y)
+                            controller.startFocusAndMetering(
+                                FocusMeteringAction.Builder(point).build(),
+                            )
+                            focusPoint = offset
+                        }
+                    },
+            )
+
+            FramingOverlay(
+                frame = frame,
+                subjectBox = if (settings.showGuidance) primarySubject else null,
+                show = showFrame,
+                modifier = Modifier.fillMaxSize(),
+            )
+            if (settings.showHorizon) {
+                HorizonIndicator(level = level, modifier = Modifier.fillMaxSize())
+            }
+            if (settings.showGrid && !showFrame) {
+                ThirdsGrid(modifier = Modifier.fillMaxSize())
+            }
+
+            FocusRing(focusPoint = focusPoint, onFinished = { focusPoint = null })
         }
 
-        // Top HUD.
-        MetadataHud(
-            exposure = exposure,
-            capabilities = capabilities,
+        // ---- Top: metadata HUD + aspect selector ---------------------------------------------
+        Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .statusBarsPadding()
                 .padding(top = 12.dp, start = 16.dp, end = 16.dp),
-        )
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            MetadataHud(exposure = exposure, capabilities = capabilities)
+            AspectRatioSelector(current = aspect, onSelect = { aspect = it })
+        }
 
-        // Coaching just above the shutter bar.
-        GuidanceBar(
-            frame = frame,
-            visible = settings.showGuidance && frame.hasSubject,
+        // ---- Bottom: coaching + zoom + shutter -----------------------------------------------
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 132.dp)
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp),
-        )
-
-        // Bottom control bar.
-        ShutterBar(
-            isIdeal = frame.isIdeal,
-            onCapture = { capture() },
-            onOpenSettings = { showSettings = true },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(bottom = 28.dp),
-        )
+                .padding(bottom = 22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            GuidanceBar(
+                frame = frame,
+                visible = settings.showGuidance && frame.hasSubject,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+            )
+            ZoomBar(zoom = zoom, onJump = { controller.jumpToZoom(it) })
+            ShutterBar(
+                isIdeal = frame.isIdeal,
+                lastCapture = lastCapture,
+                onCapture = { capture() },
+                onOpenSettings = { showSettings = true },
+                onOpenGallery = { showGallery = true },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
 
-        // Capture flash on top of everything.
+        // ---- Capture flash -------------------------------------------------------------------
         if (flash.value > 0.001f) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .drawBehind { drawRect(Color.White.copy(alpha = flash.value)) }
+                    .drawBehind { drawRect(Color.White.copy(alpha = flash.value)) },
             )
         }
     }
@@ -197,6 +249,30 @@ fun CameraScreen() {
             exposureState = controller.cameraExposureState(),
             onChange = { settings = it },
             onDismiss = { showSettings = false },
+        )
+    }
+
+    if (showGallery) {
+        GalleryScreen(onClose = { showGallery = false })
+    }
+}
+
+/** A brief shrinking ring at the tapped focus point. */
+@Composable
+private fun FocusRing(focusPoint: Offset?, onFinished: () -> Unit) {
+    if (focusPoint == null) return
+    val scale = remember(focusPoint) { Animatable(1.4f) }
+    LaunchedEffect(focusPoint) {
+        scale.animateTo(1f, tween(220))
+        delay(500)
+        onFinished()
+    }
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        drawCircle(
+            color = Accent,
+            radius = 34.dp.toPx() * scale.value,
+            center = focusPoint,
+            style = Stroke(width = 2.dp.toPx()),
         )
     }
 }

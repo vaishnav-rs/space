@@ -20,9 +20,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -32,9 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.perfectframe.camera.ui.components.GlassSurface
 import com.perfectframe.camera.ui.theme.Accent
 import com.perfectframe.camera.ui.theme.TextPrimary
@@ -49,8 +49,10 @@ import com.perfectframe.camera.ui.theme.TextSecondary
 @Composable
 fun ShutterBar(
     isIdeal: Boolean,
+    lastCapture: android.net.Uri?,
     onCapture: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenGallery: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -78,15 +80,38 @@ fun ShutterBar(
 
         ShutterButton(isIdeal = isIdeal, onCapture = onCapture)
 
-        // Balances the row and states the product promise plainly.
-        GlassSurface(shape = RoundedCornerShape(50)) {
-            Text(
-                text = "AUTO",
-                color = TextSecondary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+        GalleryButton(lastCapture = lastCapture, onClick = onOpenGallery)
+    }
+}
+
+/** Opens the in-app gallery; shows the most recent shot as its thumbnail once one exists. */
+@Composable
+private fun GalleryButton(lastCapture: android.net.Uri?, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(52.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (lastCapture != null) {
+            AsyncImage(
+                model = lastCapture,
+                contentDescription = "Open gallery",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(52.dp).clip(RoundedCornerShape(14.dp)),
             )
+        } else {
+            GlassSurface(shape = RoundedCornerShape(14.dp)) {
+                Box(modifier = Modifier.size(52.dp), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.PhotoLibrary,
+                        contentDescription = "Open gallery",
+                        tint = TextSecondary,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+            }
         }
     }
 }

@@ -8,6 +8,12 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
 
+    <!-- Reading the app's own captures for the in-app gallery. On Q+ an app can always read the
+         media it created without a runtime grant; only pre-Q needs READ_EXTERNAL_STORAGE. -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
     <uses-feature
         android:name="android.hardware.camera.any"
         android:required="true" />
