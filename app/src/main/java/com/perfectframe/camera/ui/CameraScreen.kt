@@ -14,6 +14,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -32,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,17 +64,18 @@ import com.perfectframe.camera.camera.CameraController
 import com.perfectframe.camera.camera.CaptureMode
 import com.perfectframe.camera.composition.CompositionEngine
 import com.perfectframe.camera.composition.NormRect
+import com.perfectframe.camera.composition.PerfectFrame
 import com.perfectframe.camera.editor.FilmLook
 import com.perfectframe.camera.editor.processCapturedPhoto
 import com.perfectframe.camera.film.DevelopingOverlay
-import com.perfectframe.camera.film.FilmShelf
+import com.perfectframe.camera.film.FilmCameraBody
 import com.perfectframe.camera.film.FilmRollController
-import com.perfectframe.camera.film.FilmStockBadge
+import com.perfectframe.camera.film.FilmShelf
 import com.perfectframe.camera.film.FilmViewfinderFrame
-import com.perfectframe.camera.film.FrameCounter
 import com.perfectframe.camera.film.RollPhase
 import com.perfectframe.camera.gallery.GalleryScreen
 import com.perfectframe.camera.sensors.LevelDetector
+import com.perfectframe.camera.sensors.LevelState
 import com.perfectframe.camera.ui.components.GlassSurface
 import com.perfectframe.camera.ui.controls.AspectRatioSelector
 import com.perfectframe.camera.ui.controls.ZoomBar
@@ -85,23 +88,22 @@ import com.perfectframe.camera.ui.overlay.ThirdsGrid
 import com.perfectframe.camera.ui.settings.SettingsSheet
 import com.perfectframe.camera.ui.settings.ViewfinderSettings
 import com.perfectframe.camera.ui.theme.Accent
-import com.perfectframe.camera.ui.theme.Surface0
 import com.perfectframe.camera.ui.theme.TextPrimary
-import com.perfectframe.camera.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * The single camera screen, now with two shooting experiences (spec extension):
+ * The single camera screen, now with two entirely distinct shooting experiences:
  *
- * - **Frameica**: the smart autoframer. Tap inside the suggested frame and the final saved photo
- *   is cropped to exactly that composition, straightened level, auto-toned, and finished with a
- *   clean look — showing *only* the perfect frame, not the wider scene it was taken from.
- * - **Film**: a skeuomorphic ritual. Load a stock from the shelf, shoot, wind, and wait through a
- *   real ~30s develop before the photo (in that stock's look) appears. No autoframing — a real
- *   camera doesn't reframe for you.
+ * - **Frameica**: the smart autoframer, in the app's own modern glass chrome. Tap inside the
+ *   suggested frame and the final saved photo is cropped to exactly that composition, straightened
+ *   level, auto-toned, and finished with a clean look.
+ * - **Film**: not an app skin over the camera — a physical body ([FilmCameraBody]). Metal top
+ *   plate, leatherette shell, an eyepiece-style viewfinder window instead of a full-bleed preview,
+ *   an analog frame counter, an exposure needle, and a winding lever that sweeps between shots.
+ *   Load a stock, shoot, wind, and wait through a real ~30s develop. No autoframing.
  *
- * Both share the same camera pipeline, exposure HUD, zoom/aspect controls, and level/grid.
+ * Both share the same camera pipeline, exposure engine, and zoom/level/grid.
  */
 @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
 @Composable
@@ -213,168 +215,132 @@ fun CameraScreen() {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-
-        // ---- Letterboxed WYSIWYG preview + overlays ------------------------------------------
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .fillMaxWidth()
-                .aspectRatio(aspect.previewAspect),
-        ) {
-            AndroidView(modifier = Modifier.fillMaxSize(), factory = { previewView })
-
+    if (mode == CaptureMode.FRAMEICA) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(mode) {
-                        detectTransformGestures { _, _, zoomChange, _ ->
-                            if (zoomChange != 1f) controller.scaleZoom(zoomChange)
-                        }
-                    }
-                    .pointerInput(mode) {
-                        detectTapGestures { offset ->
-                            val point = previewView.meteringPointFactory
-                                .createPoint(offset.x, offset.y)
-                            controller.startFocusAndMetering(
-                                FocusMeteringAction.Builder(point).build(),
-                            )
-                            focusPoint = offset
-
-                            if (mode == CaptureMode.FRAMEICA) {
-                                val f = frameState.value
-                                val box = f.box
-                                val w = size.width.toFloat()
-                                val h = size.height.toFloat()
-                                val inside = showFrameState.value &&
-                                    offset.x in (box.left * w)..(box.right * w) &&
-                                    offset.y in (box.top * h)..(box.bottom * h)
-                                if (inside) captureFrameica(box)
-                            }
-                        }
-                    },
-            )
-
-            if (mode == CaptureMode.FRAMEICA) {
-                FramingOverlay(
+                    .align(Alignment.Center)
+                    .fillMaxWidth()
+                    .aspectRatio(aspect.previewAspect),
+            ) {
+                ViewfinderContent(
+                    mode = mode,
+                    previewView = previewView,
+                    controller = controller,
                     frame = frame,
-                    subjectBox = if (settings.showGuidance) primarySubject else null,
-                    show = showFrame,
-                    modifier = Modifier.fillMaxSize(),
+                    showFrame = showFrame,
+                    frameState = frameState,
+                    showFrameState = showFrameState,
+                    primarySubject = primarySubject,
+                    settings = settings,
+                    level = level,
+                    roll = roll,
+                    focusPoint = focusPoint,
+                    onFocusPoint = { focusPoint = it },
+                    onCaptureFrameica = ::captureFrameica,
                 )
-                if (settings.showGrid && !showFrame) {
-                    ThirdsGrid(modifier = Modifier.fillMaxSize())
-                }
-            } else {
-                FilmViewfinderFrame(modifier = Modifier.fillMaxSize())
-                if (settings.showGrid) {
-                    ThirdsGrid(modifier = Modifier.fillMaxSize())
-                }
-            }
-            if (settings.showHorizon) {
-                HorizonIndicator(level = level, modifier = Modifier.fillMaxSize())
             }
 
-            FocusRing(focusPoint = focusPoint, onFinished = { focusPoint = null })
-
-            AnimatedVisibility(
-                visible = mode == CaptureMode.FILM && roll.phase == RollPhase.DEVELOPING,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.fillMaxSize(),
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(top = 10.dp, start = 16.dp, end = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                DevelopingOverlay(progress = roll.developProgress, totalSeconds = 30)
-            }
-        }
-
-        // ---- Top chrome ------------------------------------------------------------------------
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .statusBarsPadding()
-                .padding(top = 10.dp, start = 16.dp, end = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                GlassSurface(shape = CircleShape) {
-                    Box(
-                        modifier = Modifier.size(44.dp).clickable { showSettings = true },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Settings,
-                            contentDescription = "Settings",
-                            tint = TextPrimary,
-                            modifier = Modifier.size(22.dp),
-                        )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    GlassSurface(shape = CircleShape) {
+                        Box(
+                            modifier = Modifier.size(44.dp).clickable { showSettings = true },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Settings,
+                                contentDescription = "Settings",
+                                tint = TextPrimary,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
                     }
-                }
-                if (mode == CaptureMode.FRAMEICA) {
                     AspectRatioSelector(current = aspect, onSelect = { aspect = it })
-                } else {
-                    FilmStockBadge(roll = roll, onChangeRoll = { showFilmShelf = true })
                 }
+                MetadataHud(exposure = exposure, capabilities = capabilities)
             }
-            MetadataHud(exposure = exposure, capabilities = capabilities)
-        }
 
-        // ---- Bottom chrome ----------------------------------------------------------------------
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(bottom = 18.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            if (mode == CaptureMode.FRAMEICA) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(bottom = 18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
                 GuidanceBar(
                     frame = frame,
                     visible = settings.showGuidance && frame.hasSubject,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 )
-            } else {
-                FrameCounter(roll = roll)
+                ZoomBar(zoom = zoom, onJump = { controller.jumpToZoom(it) })
+                ModeSwitcher(mode = mode, onSelect = { mode = it })
+                ShutterBar(
+                    isIdeal = frame.isIdeal,
+                    lastCapture = lastCapture,
+                    onCapture = { captureManual() },
+                    onOpenGallery = { showGallery = true },
+                    onSwitchCamera = { scope.launch { controller.switchCamera() } },
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
-            ZoomBar(zoom = zoom, onJump = { controller.jumpToZoom(it) })
-            ModeSwitcher(mode = mode, onSelect = { mode = it })
-            ShutterBar(
-                isIdeal = mode == CaptureMode.FRAMEICA && frame.isIdeal,
-                lastCapture = lastCapture,
-                shutterEnabled = mode == CaptureMode.FRAMEICA || !roll.isBusy,
-                onCapture = {
-                    when (mode) {
-                        CaptureMode.FRAMEICA -> captureManual()
-                        CaptureMode.FILM -> {
-                            if (roll.stock == null || roll.phase == RollPhase.FINISHED) {
-                                showFilmShelf = true
-                            } else {
-                                scope.launch {
-                                    filmRoll.shoot(context, controller) { uri ->
-                                        controller.noteExternalCapture(uri)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                onOpenGallery = { showGallery = true },
-                onSwitchCamera = { scope.launch { controller.switchCamera() } },
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
 
-        if (flash.value > 0.001f) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .drawBehind { drawRect(Color.White.copy(alpha = flash.value)) },
+            if (flash.value > 0.001f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .drawBehind { drawRect(Color.White.copy(alpha = flash.value)) },
+                )
+            }
+        }
+    } else {
+        FilmCameraBody(
+            roll = roll,
+            exposure = exposure,
+            lastCapture = lastCapture,
+            onShutter = {
+                if (roll.stock == null || roll.phase == RollPhase.FINISHED) {
+                    showFilmShelf = true
+                } else {
+                    scope.launch {
+                        filmRoll.shoot(context, controller) { uri -> controller.noteExternalCapture(uri) }
+                    }
+                }
+            },
+            onChangeRoll = { showFilmShelf = true },
+            onOpenGallery = { showGallery = true },
+            onSwitchCamera = { scope.launch { controller.switchCamera() } },
+            onOpenSettings = { showSettings = true },
+            onSwitchToFrameica = { mode = CaptureMode.FRAMEICA },
+        ) {
+            ViewfinderContent(
+                mode = mode,
+                previewView = previewView,
+                controller = controller,
+                frame = frame,
+                showFrame = showFrame,
+                frameState = frameState,
+                showFrameState = showFrameState,
+                primarySubject = primarySubject,
+                settings = settings,
+                level = level,
+                roll = roll,
+                focusPoint = focusPoint,
+                onFocusPoint = { focusPoint = it },
+                onCaptureFrameica = ::captureFrameica,
             )
         }
     }
@@ -400,7 +366,90 @@ fun CameraScreen() {
     }
 }
 
-/** Small segmented switcher between the two shooting experiences. */
+/**
+ * The live preview + its gesture layer + mode-specific framing overlays. Shared verbatim between
+ * Frameica's letterboxed glass chrome and Film mode's eyepiece window so the capture/focus/zoom
+ * behaviour is identical regardless of which physical or digital housing it's viewed through.
+ */
+@Composable
+private fun BoxScope.ViewfinderContent(
+    mode: CaptureMode,
+    previewView: PreviewView,
+    controller: CameraController,
+    frame: PerfectFrame,
+    showFrame: Boolean,
+    frameState: State<PerfectFrame>,
+    showFrameState: State<Boolean>,
+    primarySubject: NormRect?,
+    settings: ViewfinderSettings,
+    level: LevelState,
+    roll: com.perfectframe.camera.film.FilmRollState,
+    focusPoint: Offset?,
+    onFocusPoint: (Offset?) -> Unit,
+    onCaptureFrameica: (NormRect) -> Unit,
+) {
+    AndroidView(modifier = Modifier.fillMaxSize(), factory = { previewView })
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(mode) {
+                detectTransformGestures { _, _, zoomChange, _ ->
+                    if (zoomChange != 1f) controller.scaleZoom(zoomChange)
+                }
+            }
+            .pointerInput(mode) {
+                detectTapGestures { offset ->
+                    val point = previewView.meteringPointFactory.createPoint(offset.x, offset.y)
+                    controller.startFocusAndMetering(FocusMeteringAction.Builder(point).build())
+                    onFocusPoint(offset)
+
+                    if (mode == CaptureMode.FRAMEICA) {
+                        val box = frameState.value.box
+                        val w = size.width.toFloat()
+                        val h = size.height.toFloat()
+                        val inside = showFrameState.value &&
+                            offset.x in (box.left * w)..(box.right * w) &&
+                            offset.y in (box.top * h)..(box.bottom * h)
+                        if (inside) onCaptureFrameica(box)
+                    }
+                }
+            },
+    )
+
+    if (mode == CaptureMode.FRAMEICA) {
+        FramingOverlay(
+            frame = frame,
+            subjectBox = if (settings.showGuidance) primarySubject else null,
+            show = showFrame,
+            modifier = Modifier.fillMaxSize(),
+        )
+        if (settings.showGrid && !showFrame) {
+            ThirdsGrid(modifier = Modifier.fillMaxSize())
+        }
+    } else {
+        FilmViewfinderFrame(modifier = Modifier.fillMaxSize())
+        if (settings.showGrid) {
+            ThirdsGrid(modifier = Modifier.fillMaxSize())
+        }
+    }
+    if (settings.showHorizon) {
+        HorizonIndicator(level = level, modifier = Modifier.fillMaxSize())
+    }
+
+    FocusRing(focusPoint = focusPoint, onFinished = { onFocusPoint(null) })
+
+    AnimatedVisibility(
+        visible = mode == CaptureMode.FILM && roll.phase == RollPhase.DEVELOPING,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        DevelopingOverlay(progress = roll.developProgress, totalSeconds = 30)
+    }
+}
+
+/** Small segmented switcher between the two shooting experiences (Frameica mode's chrome only). */
 @Composable
 private fun ModeSwitcher(mode: CaptureMode, onSelect: (CaptureMode) -> Unit) {
     GlassSurface(shape = RoundedCornerShape(50)) {
@@ -409,7 +458,7 @@ private fun ModeSwitcher(mode: CaptureMode, onSelect: (CaptureMode) -> Unit) {
                 val active = option == mode
                 Text(
                     text = option.label,
-                    color = if (active) Surface0 else TextSecondary,
+                    color = if (active) com.perfectframe.camera.ui.theme.Surface0 else com.perfectframe.camera.ui.theme.TextSecondary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier

@@ -45,7 +45,13 @@ No accounts, no network, no cloud. All vision runs on-device.
   clean look. The result shows only the perfect frame — not the wider scene it was taken from.
   Post-processing runs on a private temp capture, so no unprocessed intermediate ever reaches the
   gallery.
-- **Film** — a skeuomorphic ritual. Load a stock from a shelf of original film-inspired boxes
+- **Film** — not an app skin over the camera, a physical camera body. A brushed-aluminium top
+  plate (rewind crank that doubles as the front/back switch, a pentaprism hump hiding the settings
+  screw, an ISO dial that opens the film shelf) over a dark leatherette shell. The preview lives in
+  an eyepiece-style window — not a full-bleed rectangle — with a rangefinder split-circle, an
+  analog exposure needle, and a little memo-holder tab showing the loaded stock. The bottom deck
+  has a real mechanical-looking shutter button, an analog frame-counter dial, and a winding lever
+  that visibly sweeps between shots. Load a stock from a shelf of original film-inspired boxes
   (generic names like "Sunset 200" / "Mono 400" — not literal recreations of any trademarked
   stock), shoot, wind on, and wait through a real ~30-second develop — the shot stays hidden until
   it's "developed," matching the honesty stance: no cheating the wait. No autoframing here; a real
