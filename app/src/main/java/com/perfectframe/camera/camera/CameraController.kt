@@ -50,6 +50,10 @@ class CameraController(private val appContext: Context) {
     private var imageCapture: ImageCapture? = null
     private var camera: Camera? = null
 
+    // Remembered so manual-override changes (AE lock) can transparently rebind the use cases.
+    private var boundLifecycleOwner: LifecycleOwner? = null
+    private var boundPreviewView: PreviewView? = null
+
     // Single-threaded analysis pump so ML Kit work never runs on the main or camera threads.
     private val analysisExecutor: ExecutorService = Executors.newSingleThreadExecutor()
 
@@ -69,6 +73,8 @@ class CameraController(private val appContext: Context) {
     ) {
         val provider = awaitCameraProvider()
         cameraProvider = provider
+        boundLifecycleOwner = lifecycleOwner
+        boundPreviewView = previewView
 
         // Build Preview with Camera2 interop: drive AE/AWB and read back live metadata per frame.
         val previewBuilder = Preview.Builder()
@@ -185,6 +191,32 @@ class CameraController(private val appContext: Context) {
                 }
             )
         }
+    }
+
+    /**
+     * Live EV compensation on top of auto exposure — a *manual override that respects the auto
+     * engine* rather than replacing it (spec §0.2). Uses CameraX's first-class
+     * [androidx.camera.core.CameraControl.setExposureCompensationIndex] so it takes effect without
+     * a rebind. [index] is in the sensor's own compensation steps.
+     */
+    fun setExposureCompensationIndex(index: Int) {
+        runCatching { camera?.cameraControl?.setExposureCompensationIndex(index) }
+    }
+
+    /** The device's supported EV range/step, so the UI can present real limits (or hide EV). */
+    fun cameraExposureState(): androidx.camera.core.ExposureState? =
+        camera?.cameraInfo?.exposureState
+
+    /**
+     * Locks/unlocks AE+AWB. This flows through the Camera2Interop request options, which are set
+     * at bind time, so toggling it rebinds the use cases with the new lock state.
+     */
+    suspend fun setExposureLocked(locked: Boolean) {
+        exposure.setManualOverride(locked)
+        exposure.setAeLock(locked)
+        val owner = boundLifecycleOwner
+        val view = boundPreviewView
+        if (owner != null && view != null) bind(owner, view)
     }
 
     fun unbind() {
