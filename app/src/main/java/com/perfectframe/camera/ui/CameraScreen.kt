@@ -54,6 +54,7 @@ import kotlinx.coroutines.launch
  * fires a single haptic tick; capturing flashes the screen — the two moments of tactile feedback
  * that make the experience feel like a real camera.
  */
+@androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
 @Composable
 fun CameraScreen() {
     val context = LocalContext.current
