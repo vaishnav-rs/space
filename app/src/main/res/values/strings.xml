@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Perfect Frame</string>
+    <string name="camera_permission_rationale">Perfect Frame needs the camera to compose and capture photos.</string>
+    <string name="grant_permission">Grant camera access</string>
+</resources>
