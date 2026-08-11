@@ -1,6 +1,7 @@
 package com.perfectframe.camera.ui
 
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,20 +10,26 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.perfectframe.camera.camera.CameraController
+import com.perfectframe.camera.sensors.LevelDetector
+import kotlin.math.tan
 import kotlinx.coroutines.launch
 
 /**
@@ -41,6 +48,25 @@ fun CameraScreen() {
     val capabilities by controller.capabilities.collectAsStateWithLifecycle()
     val exposure by controller.exposure.state.collectAsStateWithLifecycle()
 
+    val levelDetector = remember { LevelDetector(context.applicationContext) }
+    val level by levelDetector.state.collectAsStateWithLifecycle()
+
+    // Register/unregister sensor listeners with the lifecycle to avoid leaking them.
+    DisposableEffect(lifecycleOwner, levelDetector) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> levelDetector.start()
+                Lifecycle.Event.ON_PAUSE -> levelDetector.stop()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            levelDetector.stop()
+        }
+    }
+
     val previewView = remember {
         PreviewView(context).apply {
             scaleType = PreviewView.ScaleType.FILL_CENTER
@@ -57,6 +83,26 @@ fun CameraScreen() {
             modifier = Modifier.fillMaxSize(),
             factory = { previewView }
         )
+
+        // TEMP basic level line (replaced by the integrated edge indicator in the UI pass):
+        // a center horizon line that rotates with device roll and turns accent when level.
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val cx = size.width / 2f
+            val cy = size.height / 2f
+            val half = size.width * 0.32f
+            // Screen-space slope from roll angle; clamp so extreme tilt stays on-screen.
+            val slope = tan((-level.rollDegrees).coerceIn(-45f, 45f) * (Math.PI / 180.0)).toFloat()
+            val dy = half * slope
+            val color = if (level.isLevel) Color(0xFF7DF9C6) else Color(0x99FFFFFF)
+            drawLine(
+                color = color,
+                start = Offset(cx - half, cy + dy),
+                end = Offset(cx + half, cy - dy),
+                strokeWidth = 4f,
+            )
+            // Fixed reference dot at true center.
+            drawCircle(color = color, radius = 6f, center = Offset(cx, cy))
+        }
 
         // TEMP debug readout (replaced by the glass HUD in the UI pass): honest capability line
         // plus live auto-exposure telemetry and the reasoning for why it settled where it did.
