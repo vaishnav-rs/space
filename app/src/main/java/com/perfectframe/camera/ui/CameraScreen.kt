@@ -39,6 +39,7 @@ fun CameraScreen() {
     val scope = rememberCoroutineScope()
     val controller = remember { CameraController(context.applicationContext) }
     val capabilities by controller.capabilities.collectAsStateWithLifecycle()
+    val exposure by controller.exposure.state.collectAsStateWithLifecycle()
 
     val previewView = remember {
         PreviewView(context).apply {
@@ -57,9 +58,15 @@ fun CameraScreen() {
             factory = { previewView }
         )
 
-        // TEMP debug readout (replaced by the glass HUD in the UI pass): honest capability line.
+        // TEMP debug readout (replaced by the glass HUD in the UI pass): honest capability line
+        // plus live auto-exposure telemetry and the reasoning for why it settled where it did.
         Text(
-            text = capabilities?.summary() ?: "Reading sensor capabilities…",
+            text = buildString {
+                append("${exposure.isoLabel}   ${exposure.shutterLabel}   ")
+                append("${exposure.apertureLabel}   ${exposure.whiteBalanceLabel}\n")
+                append(exposure.reasonLabel).append('\n')
+                append(capabilities?.summary() ?: "Reading sensor capabilities…")
+            },
             color = Color.White,
             textAlign = TextAlign.Center,
             modifier = Modifier

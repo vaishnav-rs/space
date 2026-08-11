@@ -5,6 +5,9 @@ import android.content.Context
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
+import androidx.annotation.OptIn as AndroidxOptIn
+import androidx.camera.camera2.interop.Camera2Interop
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
@@ -42,7 +45,11 @@ class CameraController(private val appContext: Context) {
     private val _capabilities = MutableStateFlow<CameraCapabilities?>(null)
     val capabilities: StateFlow<CameraCapabilities?> = _capabilities.asStateFlow()
 
+    /** Auto exposure/WB pipeline; its [ExposurePipeline.state] feeds the HUD. */
+    val exposure = ExposurePipeline()
+
     /** Binds Preview + ImageCapture to [previewView]'s surface for [lifecycleOwner]. */
+    @AndroidxOptIn(ExperimentalCamera2Interop::class)
     suspend fun bind(
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
@@ -50,7 +57,13 @@ class CameraController(private val appContext: Context) {
         val provider = awaitCameraProvider()
         cameraProvider = provider
 
-        val preview = Preview.Builder().build().also {
+        // Build Preview with Camera2 interop: drive AE/AWB and read back live metadata per frame.
+        val previewBuilder = Preview.Builder()
+        Camera2Interop.Extender(previewBuilder).apply {
+            exposure.applyTo(this)
+            setSessionCaptureCallback(exposure.captureCallback)
+        }
+        val preview = previewBuilder.build().also {
             it.surfaceProvider = previewView.surfaceProvider
         }
 
@@ -78,6 +91,7 @@ class CameraController(private val appContext: Context) {
             camera = provider.bindToLifecycle(lifecycleOwner, selector, preview, capture)
             camera?.cameraInfo?.let { info ->
                 _capabilities.value = CameraCapabilities.from(info)
+                exposure.learnLimits(info)
             }
             Log.i(TAG, "Preview + ImageCapture bound to back camera.")
         } catch (t: Throwable) {
