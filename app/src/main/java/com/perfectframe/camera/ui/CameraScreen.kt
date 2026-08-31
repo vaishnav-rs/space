@@ -133,6 +133,8 @@ fun CameraScreen() {
     var aspect by remember { mutableStateOf(controller.currentAspect()) }
     var focusPoint by remember { mutableStateOf<Offset?>(null) }
     var mode by remember { mutableStateOf(CaptureMode.FRAMEICA) }
+    var isAutoFramingActive by remember { mutableStateOf(false) }
+    var priorZoomRatio by remember { mutableStateOf(1f) }
 
     val levelTolerance = if (settings.strictLevel) 1.5f else 3.0f
     LaunchedEffect(levelTolerance) { levelDetector.setTolerance(levelTolerance) }
@@ -158,6 +160,12 @@ fun CameraScreen() {
     LaunchedEffect(aspect) { controller.setAspect(aspect) }
     LaunchedEffect(settings.exposureLocked) { controller.setExposureLocked(settings.exposureLocked) }
     LaunchedEffect(settings.evIndex) { controller.setExposureCompensationIndex(settings.evIndex) }
+    LaunchedEffect(mode) {
+        if (mode != CaptureMode.FRAMEICA && isAutoFramingActive) {
+            isAutoFramingActive = false
+            controller.setZoomRatio(priorZoomRatio)
+        }
+    }
 
     DisposableEffect(controller) { onDispose { controller.release() } }
 
@@ -201,6 +209,9 @@ fun CameraScreen() {
         scope.launch {
             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             flashScreen()
+            isAutoFramingActive = false
+            controller.setZoomRatio(priorZoomRatio)
+
             val file = controller.captureToTempFile() ?: return@launch
             val rollDegrees = levelState.value.rollDegrees
             val uri = processCapturedPhoto(
@@ -212,6 +223,46 @@ fun CameraScreen() {
                 look = FilmLook.CLEAR,
             )
             if (uri != null) controller.noteExternalCapture(uri)
+        }
+    }
+
+    fun activateAutoFraming() {
+        if (!frame.isIdeal) return
+        val currentZoom = zoom
+        scope.launch {
+            priorZoomRatio = currentZoom.ratio
+            isAutoFramingActive = true
+
+            // Calculate zoom to make the frame larger: inverse of frame scale.
+            // Frame.box width is a fraction of the full scene; we want to zoom by 1/width
+            // to make it fill most of the screen. Clamp to device's max zoom.
+            val frameWidth = frame.box.width.coerceAtLeast(0.15f)
+            val targetZoom = (1f / frameWidth).coerceAtMost(currentZoom.maxRatio)
+            controller.setZoomRatio(targetZoom)
+
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
+    }
+
+    fun captureFromAutoFrame() {
+        if (!isAutoFramingActive) return
+        captureFrameica(frame.box)
+    }
+
+    fun handleFrameicaTap() {
+        if (isAutoFramingActive) {
+            captureFromAutoFrame()
+        } else if (frame.isIdeal) {
+            activateAutoFraming()
+        } else {
+            captureFrameica(frame.box)
+        }
+    }
+
+    fun exitAutoFraming() {
+        if (isAutoFramingActive) {
+            isAutoFramingActive = false
+            controller.setZoomRatio(priorZoomRatio)
         }
     }
 
@@ -238,6 +289,9 @@ fun CameraScreen() {
                     focusPoint = focusPoint,
                     onFocusPoint = { focusPoint = it },
                     onCaptureFrameica = ::captureFrameica,
+                    isAutoFraming = isAutoFramingActive,
+                    onFrameicaTap = ::handleFrameicaTap,
+                    onExitAutoFrame = ::exitAutoFraming,
                 )
             }
 
@@ -286,12 +340,32 @@ fun CameraScreen() {
                     visible = settings.showGuidance && frame.hasSubject,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 )
+                if (isAutoFramingActive) {
+                    Text(
+                        text = "Adjust & tap to capture",
+                        color = Accent,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
                 ZoomBar(zoom = zoom, onJump = { controller.jumpToZoom(it) })
                 ModeSwitcher(mode = mode, onSelect = { mode = it })
                 ShutterBar(
                     isIdeal = frame.isIdeal,
                     lastCapture = lastCapture,
-                    onCapture = { captureManual() },
+                    onCapture = {
+                        if (mode == CaptureMode.FRAMEICA) {
+                            if (isAutoFramingActive) {
+                                captureFromAutoFrame()
+                            } else if (frame.isIdeal) {
+                                activateAutoFraming()
+                            } else {
+                                captureManual()
+                            }
+                        } else {
+                            captureManual()
+                        }
+                    },
                     onOpenGallery = { showGallery = true },
                     onSwitchCamera = { scope.launch { controller.switchCamera() } },
                     modifier = Modifier.fillMaxWidth(),
@@ -387,6 +461,9 @@ private fun BoxScope.ViewfinderContent(
     focusPoint: Offset?,
     onFocusPoint: (Offset?) -> Unit,
     onCaptureFrameica: (NormRect) -> Unit,
+    isAutoFraming: Boolean = false,
+    onFrameicaTap: () -> Unit = {},
+    onExitAutoFrame: () -> Unit = {},
 ) {
     AndroidView(modifier = Modifier.fillMaxSize(), factory = { previewView })
 
@@ -411,7 +488,16 @@ private fun BoxScope.ViewfinderContent(
                         val inside = showFrameState.value &&
                             offset.x in (box.left * w)..(box.right * w) &&
                             offset.y in (box.top * h)..(box.bottom * h)
-                        if (inside) onCaptureFrameica(box)
+                        if (inside) {
+                            if (isAutoFraming) {
+                                onCaptureFrameica(frameState.value.box)
+                            } else {
+                                onFrameicaTap()
+                            }
+                        } else if (isAutoFraming) {
+                            // Tap outside frame cancels auto-framing
+                            onExitAutoFrame()
+                        }
                     }
                 }
             },
@@ -421,10 +507,11 @@ private fun BoxScope.ViewfinderContent(
         FramingOverlay(
             frame = frame,
             subjectBox = if (settings.showGuidance) primarySubject else null,
-            show = showFrame,
+            show = showFrame || isAutoFraming,
+            isAutoFraming = isAutoFraming,
             modifier = Modifier.fillMaxSize(),
         )
-        if (settings.showGrid && !showFrame) {
+        if (settings.showGrid && !showFrame && !isAutoFraming) {
             ThirdsGrid(modifier = Modifier.fillMaxSize())
         }
     } else {

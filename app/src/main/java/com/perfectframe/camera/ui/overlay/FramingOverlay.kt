@@ -45,11 +45,12 @@ fun FramingOverlay(
     frame: PerfectFrame,
     subjectBox: NormRect?,
     show: Boolean,
+    isAutoFraming: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val vis by animateFloatAsState(
         targetValue = if (show) 1f else 0f,
-        animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = if (isAutoFraming) 100 else 420, easing = FastOutSlowInEasing),
         label = "framingVisibility",
     )
 
@@ -91,7 +92,7 @@ fun FramingOverlay(
         val corner = 20.dp.toPx()
 
         // 1. Dim everything outside the suggested crop (four rects around it).
-        val scrimAlpha = Scrim.alpha * vis * (if (frame.isIdeal) 1f else 0.78f)
+        val scrimAlpha = Scrim.alpha * vis * (if (isAutoFraming) 0.92f else if (frame.isIdeal) 1f else 0.78f)
         val scrim = Scrim.copy(alpha = scrimAlpha)
         drawRect(scrim, size = Size(w, top))
         drawRect(scrim, topLeft = Offset(0f, bottom), size = Size(w, (h - bottom).coerceAtLeast(0f)))
@@ -131,12 +132,14 @@ fun FramingOverlay(
         }
 
         // 5. The crop frame itself — a soft continuous rounded rect...
+        val frameAlpha = if (isAutoFraming) 0.85f else 0.55f
+        val frameStroke = if (isAutoFraming) 2.5f.dp.toPx() else 1.5f.dp.toPx()
         drawRoundRect(
-            color = strokeColor.copy(alpha = 0.55f * vis),
+            color = strokeColor.copy(alpha = frameAlpha * vis),
             topLeft = Offset(left, top),
             size = Size(cropW, cropH),
             cornerRadius = CornerRadius(corner, corner),
-            style = Stroke(width = 1.5.dp.toPx()),
+            style = Stroke(width = frameStroke),
         )
         // ...with emphasized corner brackets for that "framing" read.
         drawCornerBrackets(
@@ -144,7 +147,7 @@ fun FramingOverlay(
             length = min(cropW, cropH) * 0.16f,
             corner = corner,
             color = strokeColor.copy(alpha = vis),
-            stroke = 3.dp.toPx(),
+            stroke = (if (isAutoFraming) 4.5f else 3f).dp.toPx(),
         )
     }
 }

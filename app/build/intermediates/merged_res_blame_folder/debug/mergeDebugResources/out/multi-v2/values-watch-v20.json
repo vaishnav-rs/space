@@ -1,0 +1,20 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.perfectframe.camera.app-mergeDebugResources-63:/values-watch-v20/values-watch-v20.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\vaish\\.gradle\\caches\\8.11.1\\transforms\\3694e00d77201f59ac19bab8eadbc557\\transformed\\appcompat-1.6.1\\res\\values-watch-v20\\values-watch-v20.xml",
+                    "from": {
+                        "startLines": "2,5,8",
+                        "startColumns": "4,4,4",
+                        "startOffsets": "55,214,385",
+                        "endLines": "4,7,10",
+                        "endColumns": "12,12,12",
+                        "endOffsets": "209,380,553"
+                    }
+                }
+            ]
+        }
+    ]
+}
