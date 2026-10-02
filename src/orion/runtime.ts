@@ -1,6 +1,7 @@
 import { mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import type { AccessContext } from "./access/context.js";
 import { createUnavailableAgent, type AgentPort } from "./agent-port.js";
 import { verifyGithubSignature } from "./events.js";
 import { createGitAdapter } from "./git-adapter.js";
@@ -33,6 +34,8 @@ export type OrionRuntimeOptions = {
   classifier?: FindingClassifier;
   now?: () => string;
   runner?: Partial<RunnerOptions>;
+  /** Multi-user mode: GitHub logins must map to a person with access to the workspace. */
+  access?: AccessContext;
 };
 
 export type OrionRuntime = {
@@ -85,7 +88,24 @@ export function createOrionRuntime(opts: OrionRuntimeOptions): OrionRuntime {
   const store = createSqliteTaskStore(db);
   const registry = createWorkspaceRegistry(loadWorkspaceManifests(opts.workspacesDir));
   const tasks = new TaskService(store, now);
-  const router = new EventRouter(registry, tasks, store, now);
+  const access = opts.access;
+  const router = new EventRouter(
+    registry,
+    tasks,
+    store,
+    now,
+    access
+      ? (login, ws) => {
+          const m = access.directory.findByGithubLogin(login);
+          if (!m) return { ok: false, reason: `${login} is not a member of this Orion deployment` };
+          if (!access.directory.can(m.profileId, "tasks.create"))
+            return { ok: false, reason: `${login}'s role cannot start tasks` };
+          if (!access.directory.workspaceAllowed(m.profileId, ws.id))
+            return { ok: false, reason: `${login} has no access to ${ws.id}` };
+          return { ok: true, profileId: m.profileId };
+        }
+      : undefined,
+  );
   const agent = opts.agent ?? createUnavailableAgent();
   const classifier = opts.classifier ?? createUnavailableClassifier();
   const github = createGitHubAdapter({

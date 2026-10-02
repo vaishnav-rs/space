@@ -1,3 +1,4 @@
+import { getAccess } from "./access/context.js";
 import {
   createOpenClawAgent,
   createOpenClawClassifier,
@@ -29,6 +30,9 @@ export function getOrionRuntime(env: NodeJS.ProcessEnv = process.env): OrionRunt
     env,
     agent: createOpenClawAgent(agentOpts),
     classifier: createOpenClawClassifier(agentOpts),
+    ...(getAccess(env)
+      ? { access: getAccess(env) as NonNullable<ReturnType<typeof getAccess>> }
+      : {}),
   });
   return runtime;
 }

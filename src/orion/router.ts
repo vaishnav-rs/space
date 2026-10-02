@@ -15,6 +15,12 @@ export type RouteOutcome =
 
 export type SenderInfo = { login: string; isBot: boolean };
 
+/** Multi-user hook: maps a GitHub login to a person who may use this workspace, or refuses. */
+export type GithubActorResolver = (
+  login: string,
+  workspace: WorkspaceManifest,
+) => { ok: true; profileId?: string } | { ok: false; reason: string };
+
 /**
  * Maps normalized events onto maintenance tasks. Authorization happens here, before any task
  * exists, so unauthorized users cannot create work for a production-connected agent.
@@ -25,6 +31,7 @@ export class EventRouter {
     private readonly tasks: TaskService,
     private readonly store: TaskStore,
     private readonly now: () => string,
+    private readonly resolveActor?: GithubActorResolver,
   ) {}
 
   handle(event: OrionEvent, sender: SenderInfo, deliveryId?: string): RouteOutcome {
@@ -44,7 +51,7 @@ export class EventRouter {
         return this.onMention(workspace, event, deliveryId);
       case "IssueCommented": {
         const task = this.store.findBySource(workspace.id, event);
-        if (!task || !isAuthorizedGithubUser(workspace, event.author)) {
+        if (!task || !this.isAuthorized(workspace, event.author)) {
           return { kind: "ignored", reason: "comment without task or authorization" };
         }
         // Authorized follow-up on a task waiting for information resumes it. Comment text is data.
@@ -64,15 +71,27 @@ export class EventRouter {
     }
   }
 
+  private isAuthorized(workspace: WorkspaceManifest, login: string): boolean {
+    const who = this.resolveActor?.(login, workspace);
+    return who ? who.ok : isAuthorizedGithubUser(workspace, login);
+  }
+
   private onMention(
     workspace: WorkspaceManifest,
     event: Extract<OrionEvent, { type: "IssueMentioned" }>,
     deliveryId?: string,
   ): RouteOutcome {
-    const actor = { kind: "github-user", login: event.author } as const;
-    const gate = decide({ workspace, actor, capability: "github.issue.read" });
-    if (gate.effect !== "allow") {
-      return { kind: "rejected", reason: gate.reason };
+    // With a directory (multi-user), people and roles decide; otherwise the workspace allowlist does.
+    const who = this.resolveActor?.(event.author, workspace);
+    if (who) {
+      if (!who.ok) return { kind: "rejected", reason: who.reason };
+    } else {
+      const gate = decide({
+        workspace,
+        actor: { kind: "github-user", login: event.author },
+        capability: "github.issue.read",
+      });
+      if (gate.effect !== "allow") return { kind: "rejected", reason: gate.reason };
     }
     const existing = this.store.findBySource(workspace.id, event);
     if (event.intent === "status" || event.intent === "explain") {
@@ -93,6 +112,7 @@ export class EventRouter {
         ...(deliveryId ? { deliveryId } : {}),
       },
       reporter: { login: event.author },
+      ...(who?.ok && who.profileId ? { ownerProfileId: who.profileId } : {}),
       // Issue text is untrusted data; it is stored verbatim and wrapped before reaching a model.
       report: `${event.title}\n\n${event.body}`,
     });

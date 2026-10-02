@@ -103,6 +103,10 @@ export type MaintenanceTask = {
   reporter: { login?: string; name?: string };
   /** Verbatim report. Untrusted; always wrap before model context. */
   report: string;
+  /** The person who started the task from chat. Chat tasks are private to them until shared. */
+  ownerProfileId?: string;
+  /** People the owner explicitly shared this task with. */
+  sharedWith: string[];
   status: TaskStatus;
   /** Optimistic-concurrency counter, bumped on every write. */
   version: number;

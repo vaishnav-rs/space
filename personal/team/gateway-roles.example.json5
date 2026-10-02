@@ -1,0 +1,29 @@
+// Gateway roles for a team, aligned with Orion roles (owner/admin/engineer/member/viewer).
+// `sessions.others: "none"` makes every chat private to its creator; people share a chat
+// explicitly (session sharing in the UI), and nothing else exposes it.
+{
+  gateway: {
+    roles: {
+      default: "viewer",
+      definitions: {
+        // owner/admin
+        administrator: { sessions: { others: "write" }, agents: "*", scopes: ["operator.admin"] },
+        // engineer: full use of their own work, no view of anyone else's chats unless shared
+        engineer: {
+          sessions: { others: "none" },
+          agents: ["assistant"],
+          scopes: ["operator.read", "operator.write", "operator.approvals", "operator.questions"],
+        },
+        // member: personal assistant only
+        member: {
+          sessions: { others: "none" },
+          agents: ["assistant"],
+          scopes: ["operator.sessions.read", "operator.sessions.write", "operator.read"],
+          sandbox: "required",
+        },
+        // viewer: can read what has been shared with them
+        viewer: { sessions: { others: "none" }, agents: [], scopes: ["operator.sessions.read"] },
+      },
+    },
+  },
+}

@@ -157,10 +157,7 @@ describe("runtime: webhook in, status out, resume after restart", () => {
       report: "x",
     });
     const call = (owner: boolean, p: Record<string, unknown>) =>
-      createOrionTaskTool(
-        () => rt,
-        () => owner,
-      ).execute("1", p);
+      createOrionTaskTool({ getRuntime: () => rt, ownerInitiated: () => owner }).execute("1", p);
     await expect(call(false, { action: "status", task: "5" })).resolves.toBeDefined();
     await expect(call(false, { action: "stop", task: "5" })).rejects.toThrow(/ask for it directly/);
     await expect(

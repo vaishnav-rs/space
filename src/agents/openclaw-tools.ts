@@ -4,9 +4,11 @@ import { createShowWidgetTool, hasRegisteredShowWidgetKinds } from "../canvas/wi
 import { getRuntimeConfig, selectApplicableRuntimeConfig } from "../config/config.js";
 import { resolveControlUiSessionLinkBase } from "../config/control-ui-link-base.js";
 import { isEmbeddedMode } from "../infra/embedded-mode.js";
+import { getAccess } from "../orion/access/context.js";
 import { getOrionRuntime, orionConfigured } from "../orion/singleton.js";
 import { createOrionTaskTool } from "../orion/tool.js";
 import { isOwnerInitiated } from "../personal/guard.js";
+import { resolveRequesterId } from "../personal/index.js";
 import { createPersonalTools, guardMessageTool, guardOutboundTool } from "../personal/index.js";
 import { getActiveSecretsRuntimeConfigSnapshot } from "../secrets/runtime-state.js";
 import { getActiveRuntimeWebToolsMetadataFromState } from "../secrets/runtime-web-tools-state.js";
@@ -388,10 +390,12 @@ export function createOpenClawTools(options?: OpenClawToolsOptions): AnyAgentToo
     includeMessageTool ? messageTool : null,
     ...createPersonalTools(personalOptions),
     orionConfigured()
-      ? createOrionTaskTool(
-          () => getOrionRuntime(),
-          () => personalOptions.getOrigin().ownerInitiated,
-        )
+      ? createOrionTaskTool({
+          getRuntime: () => getOrionRuntime(),
+          ownerInitiated: () => personalOptions.getOrigin().ownerInitiated,
+          getAccess: () => getAccess(),
+          getRequesterId: () => resolveRequesterId(),
+        })
       : null,
     !isCoreCanvasHostEnabled(resolvedConfig) &&
     !hasRegisteredShowWidgetKinds() &&

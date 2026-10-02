@@ -14,7 +14,9 @@ export class TaskVersionConflictError extends Error {
   }
 }
 
-export type NewTask = Pick<MaintenanceTask, "workspaceId" | "source" | "reporter" | "report">;
+export type NewTask = Pick<MaintenanceTask, "workspaceId" | "source" | "reporter" | "report"> & {
+  ownerProfileId?: string;
+};
 
 export interface TaskStore {
   create(input: NewTask, now: string): MaintenanceTask;
@@ -115,6 +117,7 @@ export function createSqliteTaskStore(db: DatabaseSync): TaskStore {
       const task: MaintenanceTask = {
         id: randomUUID(),
         ...input,
+        sharedWith: [],
         status: "REPORTED",
         version: 1,
         createdAt: now,

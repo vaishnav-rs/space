@@ -36,7 +36,6 @@ export function createGoogleTools(
   cfg: PersonalConfig,
   getOrigin: () => TurnOrigin,
 ): AnyAgentTool[] {
-  const g = cfg.google;
   return [
     personalTool({
       name: "gmail_search",
@@ -50,14 +49,14 @@ export function createGoogleTools(
       run: async (p, signal) => {
         const max = typeof p.max === "number" ? p.max : 10;
         const list = await googleRequest<{ messages?: { id: string }[] }>(
-          g,
+          cfg.google,
           `${GMAIL}/messages?${new URLSearchParams({ q: reqStr(p, "query"), maxResults: String(max) })}`,
           { signal },
         );
         const msgs = await Promise.all(
           (list.messages ?? []).map((m) =>
             googleRequest<GmailMessage>(
-              g,
+              cfg.google,
               `${GMAIL}/messages/${m.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
               { signal },
             ),
@@ -80,7 +79,7 @@ export function createGoogleTools(
       parameters: Type.Object({ id: str("Message id from gmail_search.") }),
       run: async (p, signal) => {
         const m = await googleRequest<GmailMessage>(
-          g,
+          cfg.google,
           `${GMAIL}/messages/${reqStr(p, "id")}?format=full`,
           { signal },
         );
@@ -112,7 +111,7 @@ export function createGoogleTools(
           subject: reqStr(p, "subject"),
           body: reqStr(p, "body"),
         });
-        const d = await googleRequest<{ id: string }>(g, `${GMAIL}/drafts`, {
+        const d = await googleRequest<{ id: string }>(cfg.google, `${GMAIL}/drafts`, {
           method: "POST",
           body: { message: { raw } },
           signal,
@@ -142,7 +141,7 @@ export function createGoogleTools(
           subject: reqStr(p, "subject"),
           body: reqStr(p, "body"),
         });
-        const sent = await googleRequest<{ id: string }>(g, `${GMAIL}/messages/send`, {
+        const sent = await googleRequest<{ id: string }>(cfg.google, `${GMAIL}/messages/send`, {
           method: "POST",
           body: { raw },
           signal,
@@ -170,7 +169,7 @@ export function createGoogleTools(
             location?: string;
           }[];
         }>(
-          g,
+          cfg.google,
           `${CAL}/calendars/primary/events?${new URLSearchParams({ timeMin: from, timeMax: to, singleEvents: "true", orderBy: "startTime", maxResults: "50" })}`,
           { signal },
         );
@@ -196,7 +195,7 @@ export function createGoogleTools(
       }),
       run: async (p, signal) => {
         const e = await googleRequest<{ id: string; htmlLink: string }>(
-          g,
+          cfg.google,
           `${CAL}/calendars/primary/events`,
           {
             method: "POST",
@@ -220,7 +219,9 @@ export function createGoogleTools(
       run: async (_p, signal) => {
         const res = await googleRequest<{
           items?: { id: string; title: string; due?: string; notes?: string }[];
-        }>(g, `${TASKS}/lists/@default/tasks?showCompleted=false&maxResults=100`, { signal });
+        }>(cfg.google, `${TASKS}/lists/@default/tasks?showCompleted=false&maxResults=100`, {
+          signal,
+        });
         return res.items ?? [];
       },
     }),
@@ -234,7 +235,7 @@ export function createGoogleTools(
         due: optStr("RFC 3339 due date."),
       }),
       run: async (p, signal) => {
-        const t = await googleRequest<{ id: string }>(g, `${TASKS}/lists/@default/tasks`, {
+        const t = await googleRequest<{ id: string }>(cfg.google, `${TASKS}/lists/@default/tasks`, {
           method: "POST",
           body: {
             title: reqStr(p, "title"),
@@ -252,7 +253,7 @@ export function createGoogleTools(
       description: "Mark a Google Task completed.",
       parameters: Type.Object({ id: str("Task id from tasks_list.") }),
       run: async (p, signal) => {
-        await googleRequest(g, `${TASKS}/lists/@default/tasks/${reqStr(p, "id")}`, {
+        await googleRequest(cfg.google, `${TASKS}/lists/@default/tasks/${reqStr(p, "id")}`, {
           method: "PATCH",
           body: { status: "completed" },
           signal,
