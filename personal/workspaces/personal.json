@@ -1,0 +1,9 @@
+{
+  "id": "personal",
+  "name": "Personal",
+  "kind": "personal",
+  "policy": {
+    "grant": ["filesystem.read", "knowledge.read"],
+    "requireApproval": []
+  }
+}

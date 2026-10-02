@@ -10,6 +10,8 @@ import { getActiveSecretsRuntimeConfigSnapshot } from "../secrets/runtime-state.
 import { getActiveRuntimeWebToolsMetadataFromState } from "../secrets/runtime-web-tools-state.js";
 import { isCronRunSessionKey } from "../sessions/session-key-utils.js";
 import { resolveSkillWorkshopToolConstructionBlock } from "../skills/workshop/tool-availability.js";
+import { getSpaceRuntime, spaceConfigured } from "../space/singleton.js";
+import { createSpaceTaskTool } from "../space/tool.js";
 import { resolveAgentWorkspaceDir, resolveSessionAgentIds } from "./agent-scope.js";
 import { finalizeAgentToolAvailability } from "./agent-tool-availability.js";
 import { bindAssembledAgentToolActionDescriptor } from "./agent-tool-metadata.js";
@@ -385,6 +387,12 @@ export function createOpenClawTools(options?: OpenClawToolsOptions): AnyAgentToo
       : []),
     includeMessageTool ? messageTool : null,
     ...createPersonalTools(personalOptions),
+    spaceConfigured()
+      ? createSpaceTaskTool(
+          () => getSpaceRuntime(),
+          () => personalOptions.getOrigin().ownerInitiated,
+        )
+      : null,
     !isCoreCanvasHostEnabled(resolvedConfig) &&
     !hasRegisteredShowWidgetKinds() &&
     !widgetPresentation.currentChannelPresenter

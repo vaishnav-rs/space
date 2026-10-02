@@ -208,8 +208,11 @@ export class MaintenanceRunner {
         out.logs = await prod.readLogs({ source: first, lines: 300 });
       }
     } catch (err) {
-      if (!(err instanceof PolicyDeniedError)) {
-        throw err;
+      if (err instanceof PolicyDeniedError) {
+        // Not permitted here: investigate from code and history instead.
+      } else {
+        // Production being unreachable must not stop the investigation; record it and carry on.
+        this.tasks.apply(task.id, () => {}, { type: "production.unavailable", message: `Production logs unavailable: ${redactSecrets(err instanceof Error ? err.message : String(err)).slice(0, 200)}` });
       }
     }
     if (out.logs) {
@@ -231,12 +234,17 @@ export class MaintenanceRunner {
   }
 
   private async note(task: MaintenanceTask, message: string): Promise<void> {
-    if (task.source.kind !== "github-issue" || this.ports.github.integration === "unavailable") {
+    if (task.source.kind !== "github-issue") {
+      return;
+    }
+    if (this.ports.github.integration === "unavailable") {
+      this.tasks.apply(task.id, () => {}, { type: "notify.skipped", message: `Not posted (GitHub unavailable): ${message}` });
       return;
     }
     try {
       this.need("github.issue.comment", undefined, task);
       await this.ports.github.commentOnIssue(task.source.repo, task.source.issueNumber, message);
+      this.tasks.apply(task.id, () => {}, { type: "notify.sent", message: `Posted: ${message}` });
     } catch (err) {
       // A failed progress comment must never fail the engineering task.
       this.tasks.apply(task.id, () => {}, {

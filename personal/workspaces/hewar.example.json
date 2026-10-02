@@ -1,0 +1,49 @@
+{
+  "id": "hewar",
+  "name": "Hewar",
+  "kind": "project",
+  "repository": {
+    "remote": "git@github.com:YOUR-ORG/hewar.git",
+    "defaultBranch": "main",
+    "root": "/home/you/code/hewar",
+    "worktreesDir": "/home/you/code/hewar-agent-worktrees",
+    "branchPrefix": "agent"
+  },
+  "packageManager": "pnpm",
+  "runtime": "node",
+  "commands": {
+    "install": "pnpm install --frozen-lockfile",
+    "test": "pnpm test",
+    "testTargeted": "pnpm vitest run {files}",
+    "lint": "pnpm lint",
+    "typecheck": "pnpm typecheck",
+    "build": "pnpm build"
+  },
+  "knowledge": [
+    { "id": "graphify", "kind": "graphify", "path": "graphify-out/graph.json", "description": "Entity/dependency graph export" },
+    { "id": "wiki", "kind": "wiki", "path": "wiki", "description": "How Hewar is built and operated" },
+    { "id": "product-docs", "kind": "product-docs", "path": "docs/product", "description": "What Hewar should do" },
+    { "id": "code", "kind": "code", "path": "src" }
+  ],
+  "github": {
+    "repo": "YOUR-ORG/hewar",
+    "agentHandle": "@hewar-agent",
+    "authorizedUsers": ["your-github-login"]
+  },
+  "production": {
+    "sshHost": "hewar-prod",
+    "logSources": { "api": { "unit": "hewar-api" }, "worker": { "unit": "hewar-worker" } },
+    "services": ["hewar-api", "hewar-worker"]
+  },
+  "review": { "copilot": true, "maxReviewIterations": 3, "requireCi": true },
+  "policy": {
+    "grant": [
+      "filesystem.read", "filesystem.write", "shell.execute",
+      "git.read", "git.write", "git.commit", "git.push",
+      "github.issue.read", "github.issue.comment", "github.pr.read", "github.pr.create", "github.pr.comment", "github.pr.review.read", "github.ci.read",
+      "knowledge.read",
+      "prod.read.logs", "prod.read.processes", "prod.read.services"
+    ],
+    "requireApproval": ["prod.restart", "prod.deploy", "prod.database.write", "prod.exec"]
+  }
+}

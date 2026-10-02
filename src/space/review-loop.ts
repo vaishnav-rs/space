@@ -1,4 +1,4 @@
-import type { RemoteReview } from "./ports.js";
+import { IntegrationUnavailableError, type RemoteReview } from "./ports.js";
 import type { FindingClassification, MaintenanceTask, ReviewFinding } from "./task-types.js";
 
 export type ClassifiedFinding = {
@@ -80,4 +80,13 @@ export function decideAfterClassification(
     };
   }
   return { action: "fix", findings: valid };
+}
+
+/** Used until a model-backed classifier is bound; tasks block with an exact reason instead of guessing. */
+export function createUnavailableClassifier(
+  reason = "the review classifier is not bound to a model",
+): FindingClassifier {
+  return {
+    classify: () => Promise.reject(new IntegrationUnavailableError("review-classifier", reason)),
+  };
 }
