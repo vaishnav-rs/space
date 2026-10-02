@@ -211,7 +211,7 @@ const SETTINGS_NAVIGATION_GROUPS = [
   },
   {
     labelKey: "nav.settingsGroupSecurity",
-    routes: ["security", "secrets", "approvals"],
+    routes: ["orion", "security", "secrets", "approvals"],
   },
   {
     labelKey: "nav.settingsGroupSystem",
@@ -221,6 +221,7 @@ const SETTINGS_NAVIGATION_GROUPS = [
 
 const NON_ADMIN_SETTINGS_ROUTES: ReadonlySet<NavigationRouteId> = new Set([
   "profile",
+  "orion", // the page itself shows each person only what their Orion role allows
   "appearance",
   "notifications",
   "connection",
@@ -376,6 +377,7 @@ const NAVIGATION_PRESENTATION: Record<NavigationRouteId, NavigationPresentation>
   "model-providers": ["box", "routeTitles.modelProviders", "subtitles.modelProviders"],
   "memory-import": navigationPresentation("download", "memoryImport"),
   notifications: ["bell", "routeTitles.notifications", "subtitles.notifications"],
+  orion: navigationPresentation("users", "orion"),
   security: navigationPresentation("shieldCheck", "security"),
   secrets: ["key", "tabs.secrets", "secretsStore.hint"],
   advanced: ["fileCode", "routeTitles.advanced", "subtitles.advanced"],

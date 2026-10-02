@@ -125,6 +125,24 @@ export class Directory {
     return this.get(target.profileId) as Member;
   }
 
+  removeMember(actorId: string, profileId: string): boolean {
+    const actorRole = this.roleOf(actorId);
+    if (!can(actorRole, "members.manage")) throw new AccessDeniedError("you cannot manage members");
+    const current = this.get(profileId);
+    if (!current) return false;
+    if (!canAssignRole(actorRole, current.role))
+      throw new AccessDeniedError(`you cannot remove a ${current.role}`);
+    if (
+      current.role === "owner" &&
+      this.db.prepare("SELECT COUNT(*) AS n FROM orion_members WHERE role='owner'").get()?.n === 1
+    ) {
+      throw new AccessDeniedError("cannot remove the last owner");
+    }
+    return (
+      this.db.prepare("DELETE FROM orion_members WHERE profile_id=?").run(profileId).changes > 0
+    );
+  }
+
   private write(
     profileId: string,
     role: Role,

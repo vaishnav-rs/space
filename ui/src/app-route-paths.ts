@@ -73,6 +73,7 @@ const APP_ROUTE_DEFINITIONS = {
   labs: { path: "/settings/labs" },
   updates: { path: "/settings/updates" },
   about: { path: "/settings/about" },
+  orion: { path: "/settings/orion" },
   "ai-agents": { path: "/settings/ai-agents", aliases: ["/ai-agents"] },
   "model-setup": { path: "/settings/model-setup", aliases: ["/model-setup"] },
   "model-providers": { path: "/settings/model-providers", aliases: ["/model-providers"] },

@@ -193,7 +193,7 @@ describe("sidebar entries", () => {
 
   it("places team secrets between Privacy & Security and Approvals", () => {
     const security = settingsGroups.find((group) => group.labelKey === "nav.settingsGroupSecurity");
-    expect(security?.routes).toEqual(["security", "secrets", "approvals"]);
+    expect(security?.routes).toEqual(["orion", "security", "secrets", "approvals"]);
   });
 
   it("keeps model setup as a settings subpage without a sidebar entry", () => {

@@ -37,6 +37,18 @@ A person's own connection always wins. Admins can switch personal connections of
 
 ## Administering it
 
+### The admin screen
+
+Open **Settings → Privacy & Security → Orion admin** (`/settings/orion`). The same page serves everyone; what you see follows your Orion role.
+
+- **Overview**: who you are, what your role allows, health of the vault, GitHub identity, webhook secret and engineering runtime, and tasks that need attention.
+- **People** (admins): change roles, workspaces, GitHub login and a person's own addresses; add or remove people. First visit on a new deployment offers _Claim ownership_.
+- **Connections**: every connector with its organization and personal state. Admins connect or replace org connections, turn personal connections on or off per connector, decide whether people without their own may use the organization's, and revoke an individual's connection. Everyone connects or disconnects their own. Credential fields are password inputs that go straight to the gateway's vault and are never shown again. WhatsApp shows as organization-only.
+- **Tasks**: the tasks you may see, with timeline summary and PR link; stop, retry, approve a gated capability, or share (according to role).
+- **Workspaces** and **Activity** (admins): each workspace's grants, approval-gated capabilities and members; the connector audit log.
+
+The page talks to two gateway methods, `orion.admin.overview` (operator.read) and `orion.admin.apply` (operator.write); Orion roles then decide what each person may actually do. The CLI below does the same things from the host.
+
 ```bash
 export ORION_STATE_DIR=~/.orion ORION_VAULT_KEY=$(openssl rand -base64 32)   # keep the key safe
 node --import ./scripts/tsx.mjs scripts/orion-admin.mts bootstrap-owner you
@@ -52,7 +64,7 @@ Secrets are only ever typed at a hidden prompt (or piped on stdin), never passed
 
 ## Limits
 
-- **No admin screen yet.** Administration is the CLI above; a Control UI page for connectors and members is not built. The CLI runs on the gateway host, so whoever holds the host and the vault key is the root of trust.
+- **Admin screen is English-only** and was checked against the mocked Control UI, not a live multi-person gateway. The CLI runs on the gateway host, so whoever holds the host and the vault key is the root of trust.
 - **One trust domain.** As in OpenClaw, this is role-based access inside one gateway, not hostile multi-tenant isolation. Mutually untrusting organizations need separate gateways.
 - **Gateway link.** Roles for Orion and `gateway.roles` are configured separately; keep them aligned (the example does).
 - **Not tested live.** The access layer is covered by unit tests, including the CLI path; no real multi-person gateway run has been done.

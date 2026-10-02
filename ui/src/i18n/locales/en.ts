@@ -1963,6 +1963,7 @@ export const en: TranslationMap & {
     talk: "Talk",
     infrastructure: "Infrastructure",
     labs: "Labs",
+    orion: "Orion admin",
     updates: "Updates",
     about: "About",
     aiAgents: "Agent Defaults",
@@ -2013,6 +2014,7 @@ export const en: TranslationMap & {
     talk: "Realtime voice: provider, model, and speaker voice.",
     infrastructure: "Gateway, browser, node host, discovery, and ACP settings.",
     labs: "Experimental agent and tool capabilities.",
+    orion: "People, roles, connections and engineering tasks.",
     updates: "Release channel, automatic updates, and current update status.",
     about: "Control UI and connected Gateway build identity.",
     aiAgents: "Global agent defaults: skills, tools, and session.",
@@ -2231,8 +2233,7 @@ export const en: TranslationMap & {
     earlier: "Earlier",
     requestFailed: "Orion could not reply. Try again.",
     connectionChanged: "The Gateway connection changed. Retry to continue this setup.",
-    sessionRestarted:
-      "{error} Orion started a fresh session; earlier messages remain for context.",
+    sessionRestarted: "{error} Orion started a fresh session; earlier messages remain for context.",
     unsupportedGateway: "Update the Gateway to continue setup with Orion.",
     panel: {
       title: "Orion",
