@@ -3,7 +3,7 @@ import { extractAgentRunTerminalError, extractAgentRunText } from "../agents/age
 import type { AgentTurnRunner } from "./openclaw-agent.js";
 
 /**
- * The only place Space touches the OpenClaw agent runtime. Each turn is a system-ingress run in
+ * The only place Orion touches the OpenClaw agent runtime. Each turn is a system-ingress run in
  * its own session: not owner-authored (so owner-only tools stay off), no message tool, no
  * delivery, and a tool allowlist limited to what the step needs. Personal tools (Gmail, Resend,
  * channel sends) are not on any step's allowlist.
@@ -24,7 +24,7 @@ export function createSystemTurnRunner(): AgentTurnRunner {
         sessionEffects: "internal",
         allowModelOverride: false,
       },
-      { boundary: "space.maintenance" },
+      { boundary: "orion.maintenance" },
     );
     const view = result as Parameters<typeof extractAgentRunText>[0];
     const error = extractAgentRunTerminalError(view);

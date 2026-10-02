@@ -43,7 +43,7 @@ export interface TaskStore {
 }
 
 const SCHEMA = `
-CREATE TABLE IF NOT EXISTS space_tasks (
+CREATE TABLE IF NOT EXISTS orion_tasks (
   id TEXT PRIMARY KEY,
   workspace_id TEXT NOT NULL,
   status TEXT NOT NULL,
@@ -52,9 +52,9 @@ CREATE TABLE IF NOT EXISTS space_tasks (
   snapshot TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
-CREATE INDEX IF NOT EXISTS space_tasks_status ON space_tasks(workspace_id, status);
-CREATE UNIQUE INDEX IF NOT EXISTS space_tasks_source ON space_tasks(workspace_id, source_key) WHERE source_key IS NOT NULL;
-CREATE TABLE IF NOT EXISTS space_task_events (
+CREATE INDEX IF NOT EXISTS orion_tasks_status ON orion_tasks(workspace_id, status);
+CREATE UNIQUE INDEX IF NOT EXISTS orion_tasks_source ON orion_tasks(workspace_id, source_key) WHERE source_key IS NOT NULL;
+CREATE TABLE IF NOT EXISTS orion_task_events (
   seq INTEGER PRIMARY KEY AUTOINCREMENT,
   task_id TEXT NOT NULL,
   at TEXT NOT NULL,
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS space_task_events (
   message TEXT NOT NULL,
   data TEXT
 );
-CREATE INDEX IF NOT EXISTS space_task_events_task ON space_task_events(task_id, seq);
+CREATE INDEX IF NOT EXISTS orion_task_events_task ON orion_task_events(task_id, seq);
 CREATE TABLE IF NOT EXISTS space_deliveries (delivery_id TEXT PRIMARY KEY, at TEXT NOT NULL);
 `;
 
@@ -81,7 +81,7 @@ export function createSqliteTaskStore(db: DatabaseSync): TaskStore {
     at: string,
   ): TaskEvent => {
     const r = db
-      .prepare("INSERT INTO space_task_events(task_id, at, type, message, data) VALUES (?,?,?,?,?)")
+      .prepare("INSERT INTO orion_task_events(task_id, at, type, message, data) VALUES (?,?,?,?,?)")
       .run(taskId, at, e.type, e.message, e.data ? JSON.stringify(e.data) : null);
     return {
       seq: Number(r.lastInsertRowid),
@@ -93,7 +93,7 @@ export function createSqliteTaskStore(db: DatabaseSync): TaskStore {
     };
   };
   const read = (id: string): MaintenanceTask | undefined => {
-    const row = db.prepare("SELECT snapshot FROM space_tasks WHERE id = ?").get(id) as
+    const row = db.prepare("SELECT snapshot FROM orion_tasks WHERE id = ?").get(id) as
       | { snapshot: string }
       | undefined;
     return row ? (JSON.parse(row.snapshot) as MaintenanceTask) : undefined;
@@ -129,7 +129,7 @@ export function createSqliteTaskStore(db: DatabaseSync): TaskStore {
       };
       return transaction(() => {
         db.prepare(
-          "INSERT INTO space_tasks(id, workspace_id, status, version, source_key, snapshot, updated_at) VALUES (?,?,?,?,?,?,?)",
+          "INSERT INTO orion_tasks(id, workspace_id, status, version, source_key, snapshot, updated_at) VALUES (?,?,?,?,?,?,?)",
         ).run(
           task.id,
           task.workspaceId,
@@ -149,7 +149,7 @@ export function createSqliteTaskStore(db: DatabaseSync): TaskStore {
     },
     get: read,
     list(filter) {
-      const rows = db.prepare("SELECT snapshot FROM space_tasks ORDER BY updated_at").all() as {
+      const rows = db.prepare("SELECT snapshot FROM orion_tasks ORDER BY updated_at").all() as {
         snapshot: string;
       }[];
       return rows
@@ -174,7 +174,7 @@ export function createSqliteTaskStore(db: DatabaseSync): TaskStore {
         next.version = current.version + 1;
         next.updatedAt = now;
         db.prepare(
-          "UPDATE space_tasks SET status = ?, version = ?, snapshot = ?, updated_at = ? WHERE id = ?",
+          "UPDATE orion_tasks SET status = ?, version = ?, snapshot = ?, updated_at = ? WHERE id = ?",
         ).run(next.status, next.version, JSON.stringify(next), now, id);
         for (const e of events) {
           insertEvent(id, e, now);
@@ -186,7 +186,7 @@ export function createSqliteTaskStore(db: DatabaseSync): TaskStore {
     events(taskId) {
       const rows = db
         .prepare(
-          "SELECT seq, task_id, at, type, message, data FROM space_task_events WHERE task_id = ? ORDER BY seq",
+          "SELECT seq, task_id, at, type, message, data FROM orion_task_events WHERE task_id = ? ORDER BY seq",
         )
         .all(taskId) as {
         seq: number;
@@ -214,7 +214,7 @@ export function createSqliteTaskStore(db: DatabaseSync): TaskStore {
     },
     findBySource(workspaceId, source) {
       const row = db
-        .prepare("SELECT snapshot FROM space_tasks WHERE workspace_id = ? AND source_key = ?")
+        .prepare("SELECT snapshot FROM orion_tasks WHERE workspace_id = ? AND source_key = ?")
         .get(workspaceId, `${source.repo.toLowerCase()}#${source.issueNumber}`) as
         | { snapshot: string }
         | undefined;

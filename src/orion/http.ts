@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { readRequestBodyWithLimit, isRequestBodyLimitError } from "../infra/http-body.js";
-import type { SpaceRuntime } from "./runtime.js";
+import type { OrionRuntime } from "./runtime.js";
 
-export const SPACE_GITHUB_WEBHOOK_PATH = "/space/github/webhook";
+export const ORION_GITHUB_WEBHOOK_PATH = "/orion/github/webhook";
 const MAX_BODY_BYTES = 1024 * 1024;
 
 function header(req: IncomingMessage, name: string): string | undefined {
@@ -15,12 +15,12 @@ function header(req: IncomingMessage, name: string): string | undefined {
  * credentials, so the HMAC signature is the authentication and is checked before any parsing.
  * Returns false for every other path so the rest of the gateway is unaffected.
  */
-export async function handleSpaceWebhookRequest(
+export async function handleOrionWebhookRequest(
   req: IncomingMessage,
   res: ServerResponse,
-  getRuntime: () => SpaceRuntime | undefined,
+  getRuntime: () => OrionRuntime | undefined,
 ): Promise<boolean> {
-  if (!req.url || new URL(req.url, "http://localhost").pathname !== SPACE_GITHUB_WEBHOOK_PATH) {
+  if (!req.url || new URL(req.url, "http://localhost").pathname !== ORION_GITHUB_WEBHOOK_PATH) {
     return false;
   }
   const send = (status: number, body: object) => {

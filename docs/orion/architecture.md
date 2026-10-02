@@ -1,11 +1,11 @@
 ---
-summary: "Space architecture: one runtime, personal and project workspaces, durable maintenance tasks"
-title: "Space architecture"
+summary: "Orion architecture: one runtime, personal and project workspaces, durable maintenance tasks"
+title: "Orion architecture"
 read_when:
-  - Working on the Space maintenance engine, workspaces, or policy
+  - Working on the Orion maintenance engine, workspaces, or policy
 ---
 
-Space is OpenClaw plus a personal layer (`src/personal/`) and an engineering layer (`src/space/`). One runtime serves both. The personal assistant is the default; a project workspace activates on an explicit selection, a GitHub event, or a project name in the request (`workspace-routing.ts`).
+Orion is OpenClaw plus a personal layer (`src/personal/`) and an engineering layer (`src/orion/`). One runtime serves both. The personal assistant is the default; a project workspace activates on an explicit selection, a GitHub event, or a project name in the request (`workspace-routing.ts`).
 
 ## Components
 
@@ -13,7 +13,7 @@ Space is OpenClaw plus a personal layer (`src/personal/`) and an engineering lay
 | ------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Workspace manifests | `workspace.ts`                                                                                              | Zod-validated. Project commands, knowledge sources, GitHub block, production block, review policy, capability grants. Nothing project-specific is hard-coded elsewhere.                                                                                                                                                                                              |
 | Policy engine       | `capabilities.ts`, `policy.ts`                                                                              | Capability vocabulary; `decide()` returns allow / needs_approval / deny. Production observation (`prod.read.*`) and mutation (`prod.exec/restart/deploy/database.write`) are separate; mutation can never be granted outright, only approval-gated, and the manifest loader rejects a grant. Every adapter and runner step calls `enforce()` before the side effect. |
-| Events              | `events.ts`, `router.ts`, `webhook.ts`                                                                      | Signed GitHub webhook → normalized `SpaceEvent` → router. Authorization happens before a task exists. Bots, quoted/code-fenced mentions, duplicate deliveries and unknown repos are ignored.                                                                                                                                                                         |
+| Events              | `events.ts`, `router.ts`, `webhook.ts`                                                                      | Signed GitHub webhook → normalized `OrionEvent` → router. Authorization happens before a task exists. Bots, quoted/code-fenced mentions, duplicate deliveries and unknown repos are ignored.                                                                                                                                                                         |
 | Task state          | `task-types.ts`, `task-machine.ts`, `task-store.ts`, `task-service.ts`                                      | `MaintenanceTask` snapshot plus append-only event log in SQLite; optimistic version check; one writer (`TaskService`). `READY_FOR_HUMAN` is only reachable when the completion policy is met.                                                                                                                                                                        |
 | Runner              | `runner.ts`                                                                                                 | `step()` reads persisted state and advances one transition, so it resumes after any restart. Bounded retries, bounded fix attempts, bounded review iterations.                                                                                                                                                                                                       |
 | Ports               | `ports.ts`                                                                                                  | Every external dependency declares `real`, `mock`, `stub` or `unavailable`. The runner refuses mock/stub ports outside tests.                                                                                                                                                                                                                                        |
@@ -36,19 +36,19 @@ Real and tested against a real git repository: workspaces, policy, task engine, 
 Bound to OpenClaw but **not exercised live in this repository's tests** (the tests drive the same code with a scripted model turn):
 
 - **Agent turns** (`openclaw-agent.ts`, `agent-turn-runner.ts`): each step is one system-ingress OpenClaw run in its own session, `cwd` = the task worktree, no message tool, not owner-authored, tool allowlist `group:fs` (+ `group:runtime` for steps that must run code; none for self-review and PR text). Output is JSON-validated with one repair attempt; certainty without evidence is downgraded; the review classifier escalates anything it skips.
-- **Webhook**: `POST /space/github/webhook` is a gateway HTTP stage (`http.ts`), authenticated by HMAC signature, inert unless Space is configured.
-- **Scheduler**: started at gateway startup (`startSpaceScheduler`); resumes unfinished tasks immediately, then polls every 60 s for CI and review state.
-- **Chat entry**: the assistant's `space_task` tool (`create`, `list`, `status`, `timeline`, `stop`, `retry`, `approve`). Mutations require an owner-initiated turn.
+- **Webhook**: `POST /orion/github/webhook` is a gateway HTTP stage (`http.ts`), authenticated by HMAC signature, inert unless Orion is configured.
+- **Scheduler**: started at gateway startup (`startOrionScheduler`); resumes unfinished tasks immediately, then polls every 60 s for CI and review state.
+- **Chat entry**: the assistant's `orion_task` tool (`create`, `list`, `status`, `timeline`, `stop`, `retry`, `approve`). Mutations require an owner-initiated turn.
 
 Still incomplete or risky:
 
-- **Agent shell environment.** `group:runtime` lets a model turn run shell commands in the worktree with the gateway's environment. Run Space under a dedicated low-privilege account and use OpenClaw's sandbox for these runs before pointing it at production-connected credentials.
+- **Agent shell environment.** `group:runtime` lets a model turn run shell commands in the worktree with the gateway's environment. Run Orion under a dedicated low-privilege account and use OpenClaw's sandbox for these runs before pointing it at production-connected credentials.
 - **Live proof.** No run against a real model, the real GitHub API, Copilot review or a real SSH host has been made. Graphify's export format is an assumption.
-- **Persistence location.** Tasks live in `space-tasks.sqlite`; the repository's storage policy prefers the shared state database via its migration owner.
+- **Persistence location.** Tasks live in `orion-tasks.sqlite`; the repository's storage policy prefers the shared state database via its migration owner.
 - **Production mutation.** Not implemented; only observation exists.
 - **Stale worktrees.** Worktrees for tasks that end in `NEEDS_INFORMATION` are not garbage-collected yet.
 - **OpenClaw-maintainer profile.** Classified in `openclaw-machinery-audit.md`, not yet switchable.
 
 ## Configuration
 
-Environment: `SPACE_STATE_DIR`, `SPACE_WORKSPACES_DIR` (directory of manifest `*.json`), `SPACE_GITHUB_TOKEN`, `SPACE_GITHUB_WEBHOOK_SECRET`. See `personal/workspaces/hewar.example.json`.
+Environment: `ORION_STATE_DIR`, `ORION_WORKSPACES_DIR` (directory of manifest `*.json`), `ORION_GITHUB_TOKEN`, `ORION_GITHUB_WEBHOOK_SECRET`. See `personal/workspaces/hewar.example.json`.

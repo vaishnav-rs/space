@@ -3,27 +3,27 @@ import {
   createOpenClawClassifier,
   type AgentTurnRunner,
 } from "./openclaw-agent.js";
-import { createSpaceRuntime, type SpaceRuntime } from "./runtime.js";
+import { createOrionRuntime, type OrionRuntime } from "./runtime.js";
 
-let runtime: SpaceRuntime | undefined;
+let runtime: OrionRuntime | undefined;
 let ticker: ReturnType<typeof setInterval> | undefined;
 
-/** Loads the OpenClaw runtime binding on first use so importing Space stays cheap. */
+/** Loads the OpenClaw runtime binding on first use so importing Orion stays cheap. */
 const lazyRunner: AgentTurnRunner = async (req) =>
   (await import("./agent-turn-runner.js")).createSystemTurnRunner()(req);
 
-/** Process-wide runtime, created lazily and only when the operator has configured Space. */
-export function getSpaceRuntime(env: NodeJS.ProcessEnv = process.env): SpaceRuntime | undefined {
+/** Process-wide runtime, created lazily and only when the operator has configured Orion. */
+export function getOrionRuntime(env: NodeJS.ProcessEnv = process.env): OrionRuntime | undefined {
   if (runtime) return runtime;
-  const stateDir = env.SPACE_STATE_DIR?.trim();
-  const workspacesDir = env.SPACE_WORKSPACES_DIR?.trim();
+  const stateDir = env.ORION_STATE_DIR?.trim();
+  const workspacesDir = env.ORION_WORKSPACES_DIR?.trim();
   if (!stateDir || !workspacesDir) return undefined;
   const agentOpts = {
     run: lazyRunner,
     integration: "real" as const,
-    ...(env.SPACE_AGENT_ID ? { agentId: env.SPACE_AGENT_ID } : {}),
+    ...(env.ORION_AGENT_ID ? { agentId: env.ORION_AGENT_ID } : {}),
   };
-  runtime = createSpaceRuntime({
+  runtime = createOrionRuntime({
     stateDir,
     workspacesDir,
     env,
@@ -33,18 +33,18 @@ export function getSpaceRuntime(env: NodeJS.ProcessEnv = process.env): SpaceRunt
   return runtime;
 }
 
-export function spaceConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
-  return Boolean(env.SPACE_STATE_DIR?.trim() && env.SPACE_WORKSPACES_DIR?.trim());
+export function orionConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
+  return Boolean(env.ORION_STATE_DIR?.trim() && env.ORION_WORKSPACES_DIR?.trim());
 }
 
 /**
  * Resumes unfinished tasks now (crash recovery) and then polls CI and review state on an interval.
  * Idempotent; one tick at a time. Returns a stop function.
  */
-export function startSpaceScheduler(
+export function startOrionScheduler(
   opts: { intervalMs?: number; onError?: (err: unknown) => void } = {},
 ): () => void {
-  const rt = getSpaceRuntime();
+  const rt = getOrionRuntime();
   if (!rt || ticker) return () => {};
   let running = false;
   const tick = async () => {

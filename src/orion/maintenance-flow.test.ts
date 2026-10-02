@@ -42,7 +42,7 @@ describe("end to end: client reports a broken profile upload", () => {
   it("issue → investigate → fix in worktree → tests → PR → Copilot review loop → ready for human, surviving a restart", async () => {
     const fx = createHewarFixture();
     const registry = createWorkspaceRegistry([fx.manifest]);
-    const dbPath = join(fx.dir, "space.sqlite");
+    const dbPath = join(fx.dir, "orion.sqlite");
     let tick = 0;
     const now = () =>
       `2026-03-01T09:${String(Math.floor(tick / 60)).padStart(2, "0")}:${String(tick++ % 60).padStart(2, "0")}Z`;

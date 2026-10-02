@@ -21,7 +21,7 @@ export type HewarFixture = {
 
 /** A real git repo with an origin, a developer checkout holding uncommitted work, and a Hewar manifest. */
 export function createHewarFixture(): HewarFixture {
-  const dir = mkdtempSync(join(tmpdir(), "space-hewar-"));
+  const dir = mkdtempSync(join(tmpdir(), "orion-hewar-"));
   const origin = join(dir, "origin.git");
   const checkout = join(dir, "hewar");
   const worktreesDir = join(dir, "worktrees");

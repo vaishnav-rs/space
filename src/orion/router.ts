@@ -1,4 +1,4 @@
-import { type SpaceEvent } from "./events.js";
+import { type OrionEvent } from "./events.js";
 import { decide, isAuthorizedGithubUser } from "./policy.js";
 import { canTransition } from "./task-machine.js";
 import type { TaskService } from "./task-service.js";
@@ -27,7 +27,7 @@ export class EventRouter {
     private readonly now: () => string,
   ) {}
 
-  handle(event: SpaceEvent, sender: SenderInfo, deliveryId?: string): RouteOutcome {
+  handle(event: OrionEvent, sender: SenderInfo, deliveryId?: string): RouteOutcome {
     if (deliveryId && !this.store.recordDelivery(deliveryId, this.now())) {
       return { kind: "ignored", reason: "duplicate delivery" };
     }
@@ -66,7 +66,7 @@ export class EventRouter {
 
   private onMention(
     workspace: WorkspaceManifest,
-    event: Extract<SpaceEvent, { type: "IssueMentioned" }>,
+    event: Extract<OrionEvent, { type: "IssueMentioned" }>,
     deliveryId?: string,
   ): RouteOutcome {
     const actor = { kind: "github-user", login: event.author } as const;
@@ -106,7 +106,7 @@ export class EventRouter {
 
   private onExisting(
     task: MaintenanceTask,
-    event: Extract<SpaceEvent, { type: "IssueMentioned" }>,
+    event: Extract<OrionEvent, { type: "IssueMentioned" }>,
   ): RouteOutcome {
     if (event.intent === "stop") {
       if (TERMINAL_STATUSES.has(task.status)) {

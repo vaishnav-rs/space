@@ -1,7 +1,7 @@
 import { Type } from "typebox";
 import type { AnyAgentTool } from "../agents/tools/common.js";
 import { personalTool, optStr } from "../personal/tool-kit.js";
-import type { SpaceRuntime } from "./runtime.js";
+import type { OrionRuntime } from "./runtime.js";
 import { routeRequest } from "./workspace-routing.js";
 
 const ACTIONS = ["create", "list", "status", "timeline", "stop", "retry", "approve"] as const;
@@ -10,12 +10,12 @@ const ACTIONS = ["create", "list", "status", "timeline", "stop", "retry", "appro
  * Lets the assistant answer "what's happening with issue 184?" and steer tasks in plain language.
  * Mutations are owner-initiated turns only, matching the outbound guard's rule.
  */
-export function createSpaceTaskTool(
-  getRuntime: () => SpaceRuntime | undefined,
+export function createOrionTaskTool(
+  getRuntime: () => OrionRuntime | undefined,
   ownerInitiated: () => boolean,
 ): AnyAgentTool {
   return personalTool({
-    name: "space_task",
+    name: "orion_task",
     label: "Maintenance tasks",
     description:
       "Inspect and steer engineering maintenance tasks (bug fixes started from client reports or GitHub issues). Actions: list; status/timeline for a task or issue number; stop; retry; approve a capability a task is waiting on.",
@@ -32,7 +32,7 @@ export function createSpaceTaskTool(
       const rt = getRuntime();
       if (!rt)
         throw new Error(
-          "Space maintenance engine is not configured (set SPACE_STATE_DIR and SPACE_WORKSPACES_DIR).",
+          "Orion maintenance engine is not configured (set ORION_STATE_DIR and ORION_WORKSPACES_DIR).",
         );
       const action = typeof p.action === "string" ? p.action : "";
       const ref = typeof p.task === "string" ? p.task : "";

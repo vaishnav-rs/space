@@ -6,13 +6,13 @@ import { describe, expect, it } from "vitest";
 import { buildContext, extractTerms } from "./context-engine.js";
 import { createFileKnowledge, createGraphKnowledge } from "./knowledge-adapters.js";
 import { canRead } from "./memory-scope.js";
-import { createSpaceRuntime } from "./runtime.js";
+import { createOrionRuntime } from "./runtime.js";
 import { createHewarFixture } from "./testing/hewar-fixture.js";
-import { createSpaceTaskTool } from "./tool.js";
+import { createOrionTaskTool } from "./tool.js";
 import { routeRequest } from "./workspace-routing.js";
 import { createWorkspaceRegistry, parseWorkspaceManifest } from "./workspace.js";
 
-const tmp = () => mkdtempSync(join(tmpdir(), "space-"));
+const tmp = () => mkdtempSync(join(tmpdir(), "orion-"));
 
 describe("workspace routing and memory scopes", () => {
   const fx = createHewarFixture();
@@ -111,7 +111,7 @@ describe("runtime: webhook in, status out, resume after restart", () => {
     const stateDir = tmp();
     const wsDir = tmp();
     writeFileSync(join(wsDir, "hewar.json"), JSON.stringify(fx.manifest));
-    const env = { SPACE_GITHUB_WEBHOOK_SECRET: "s3cret" } as NodeJS.ProcessEnv;
+    const env = { ORION_GITHUB_WEBHOOK_SECRET: "s3cret" } as NodeJS.ProcessEnv;
     const body = JSON.stringify({
       action: "created",
       repository: { full_name: "acme/hewar" },
@@ -121,7 +121,7 @@ describe("runtime: webhook in, status out, resume after restart", () => {
     });
     const sig = `sha256=${createHmac("sha256", "s3cret").update(body).digest("hex")}`;
 
-    const rt = createSpaceRuntime({ stateDir, workspacesDir: wsDir, env });
+    const rt = createOrionRuntime({ stateDir, workspacesDir: wsDir, env });
     expect(
       rt.webhook(body, { "x-github-event": "issue_comment", "x-hub-signature-256": "sha256=00" }),
     ).toMatchObject({ status: 401 });
@@ -135,7 +135,7 @@ describe("runtime: webhook in, status out, resume after restart", () => {
     rt.close();
 
     // "Restart": a fresh runtime over the same state directory sees the task.
-    const rt2 = createSpaceRuntime({ stateDir, workspacesDir: wsDir, env });
+    const rt2 = createOrionRuntime({ stateDir, workspacesDir: wsDir, env });
     expect(rt2.findTask("#184")?.status).toBe("REPORTED");
     // Without a bound agent the tick blocks the task with an exact reason instead of faking progress.
     const ticked = await rt2.tick();
@@ -145,11 +145,11 @@ describe("runtime: webhook in, status out, resume after restart", () => {
     rt2.close();
   });
 
-  it("space_task: reads freely, mutates only on the owner's request", async () => {
+  it("orion_task: reads freely, mutates only on the owner's request", async () => {
     const fx = createHewarFixture();
     const wsDir = tmp();
     writeFileSync(join(wsDir, "hewar.json"), JSON.stringify(fx.manifest));
-    const rt = createSpaceRuntime({ stateDir: tmp(), workspacesDir: wsDir, env: {} });
+    const rt = createOrionRuntime({ stateDir: tmp(), workspacesDir: wsDir, env: {} });
     rt.tasks.create({
       workspaceId: "hewar",
       source: { kind: "github-issue", repo: "acme/hewar", issueNumber: 5, url: "u" },
@@ -157,7 +157,7 @@ describe("runtime: webhook in, status out, resume after restart", () => {
       report: "x",
     });
     const call = (owner: boolean, p: Record<string, unknown>) =>
-      createSpaceTaskTool(
+      createOrionTaskTool(
         () => rt,
         () => owner,
       ).execute("1", p);

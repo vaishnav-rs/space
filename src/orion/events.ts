@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 /** Normalized events. Everything that wakes the agent arrives in this shape, whatever the source. */
-export type SpaceEvent =
+export type OrionEvent =
   | {
       type: "IssueMentioned";
       repo: string;
@@ -149,7 +149,7 @@ const num = (v: unknown, path: string): number => {
 };
 
 export type ParsedEvent =
-  | { event: SpaceEvent; sender: { login: string; isBot: boolean } }
+  | { event: OrionEvent; sender: { login: string; isBot: boolean } }
   | { ignored: string };
 
 /** Turns a raw GitHub webhook into a normalized event. Unknown shapes are ignored; broken ones throw. */

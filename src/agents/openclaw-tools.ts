@@ -4,14 +4,14 @@ import { createShowWidgetTool, hasRegisteredShowWidgetKinds } from "../canvas/wi
 import { getRuntimeConfig, selectApplicableRuntimeConfig } from "../config/config.js";
 import { resolveControlUiSessionLinkBase } from "../config/control-ui-link-base.js";
 import { isEmbeddedMode } from "../infra/embedded-mode.js";
+import { getOrionRuntime, orionConfigured } from "../orion/singleton.js";
+import { createOrionTaskTool } from "../orion/tool.js";
 import { isOwnerInitiated } from "../personal/guard.js";
 import { createPersonalTools, guardMessageTool, guardOutboundTool } from "../personal/index.js";
 import { getActiveSecretsRuntimeConfigSnapshot } from "../secrets/runtime-state.js";
 import { getActiveRuntimeWebToolsMetadataFromState } from "../secrets/runtime-web-tools-state.js";
 import { isCronRunSessionKey } from "../sessions/session-key-utils.js";
 import { resolveSkillWorkshopToolConstructionBlock } from "../skills/workshop/tool-availability.js";
-import { getSpaceRuntime, spaceConfigured } from "../space/singleton.js";
-import { createSpaceTaskTool } from "../space/tool.js";
 import { resolveAgentWorkspaceDir, resolveSessionAgentIds } from "./agent-scope.js";
 import { finalizeAgentToolAvailability } from "./agent-tool-availability.js";
 import { bindAssembledAgentToolActionDescriptor } from "./agent-tool-metadata.js";
@@ -387,9 +387,9 @@ export function createOpenClawTools(options?: OpenClawToolsOptions): AnyAgentToo
       : []),
     includeMessageTool ? messageTool : null,
     ...createPersonalTools(personalOptions),
-    spaceConfigured()
-      ? createSpaceTaskTool(
-          () => getSpaceRuntime(),
+    orionConfigured()
+      ? createOrionTaskTool(
+          () => getOrionRuntime(),
           () => personalOptions.getOrigin().ownerInitiated,
         )
       : null,

@@ -25,7 +25,7 @@ import {
   type WorkspaceRegistry,
 } from "./workspace.js";
 
-export type SpaceRuntimeOptions = {
+export type OrionRuntimeOptions = {
   stateDir: string;
   workspacesDir: string;
   env?: NodeJS.ProcessEnv;
@@ -35,7 +35,7 @@ export type SpaceRuntimeOptions = {
   runner?: Partial<RunnerOptions>;
 };
 
-export type SpaceRuntime = {
+export type OrionRuntime = {
   registry: WorkspaceRegistry;
   tasks: TaskService;
   store: TaskStore;
@@ -77,11 +77,11 @@ function knowledgeFor(ws: WorkspaceManifest): KnowledgePort[] {
   });
 }
 
-export function createSpaceRuntime(opts: SpaceRuntimeOptions): SpaceRuntime {
+export function createOrionRuntime(opts: OrionRuntimeOptions): OrionRuntime {
   const env = opts.env ?? process.env;
   const now = opts.now ?? (() => new Date().toISOString());
   mkdirSync(opts.stateDir, { recursive: true });
-  const db = new DatabaseSync(join(opts.stateDir, "space-tasks.sqlite"));
+  const db = new DatabaseSync(join(opts.stateDir, "orion-tasks.sqlite"));
   const store = createSqliteTaskStore(db);
   const registry = createWorkspaceRegistry(loadWorkspaceManifests(opts.workspacesDir));
   const tasks = new TaskService(store, now);
@@ -89,7 +89,7 @@ export function createSpaceRuntime(opts: SpaceRuntimeOptions): SpaceRuntime {
   const agent = opts.agent ?? createUnavailableAgent();
   const classifier = opts.classifier ?? createUnavailableClassifier();
   const github = createGitHubAdapter({
-    ...(env.SPACE_GITHUB_TOKEN ? { token: env.SPACE_GITHUB_TOKEN } : {}),
+    ...(env.ORION_GITHUB_TOKEN ? { token: env.ORION_GITHUB_TOKEN } : {}),
   });
 
   const runnerFor = (ws: WorkspaceManifest): MaintenanceRunner => {
@@ -131,7 +131,7 @@ export function createSpaceRuntime(opts: SpaceRuntimeOptions): SpaceRuntime {
     store,
     router,
     webhook(rawBody, headers) {
-      const secret = env.SPACE_GITHUB_WEBHOOK_SECRET ?? "";
+      const secret = env.ORION_GITHUB_WEBHOOK_SECRET ?? "";
       if (!verifyGithubSignature(secret, rawBody, headers["x-hub-signature-256"])) {
         return { status: 401, error: "invalid signature" };
       }

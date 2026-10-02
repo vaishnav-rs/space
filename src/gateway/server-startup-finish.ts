@@ -11,7 +11,7 @@ import type { OpenClawConfig } from "../config/types.openclaw.js";
 import type { createSubsystemLogger } from "../logging/subsystem.js";
 import { getActiveGatewayRootWorkCount } from "../process/gateway-work-admission.js";
 import { createLazyPromise } from "../shared/lazy-runtime.js";
-import { spaceConfigured, startSpaceScheduler } from "../space/singleton.js";
+import { orionConfigured, startOrionScheduler } from "../orion/singleton.js";
 import { getAgentDatabaseStartupAdmission } from "../state/agent-database-startup.js";
 import { resolveGatewayAuth } from "./auth.js";
 import { diffGatewayReloadPaths } from "./config-diff.js";
@@ -703,9 +703,9 @@ export async function finishGatewayStartup(params: {
   } else {
     startupTrace.detail("memory.post-ready", collectGatewayProcessMemoryUsageMb());
   }
-  // Space: resume unfinished maintenance tasks and poll CI/review. No-op unless configured.
-  if (spaceConfigured()) {
-    startSpaceScheduler({
+  // Orion: resume unfinished maintenance tasks and poll CI/review. No-op unless configured.
+  if (orionConfigured()) {
+    startOrionScheduler({
       onError: (err) => log.warn(`space scheduler tick failed: ${String(err)}`),
     });
   }

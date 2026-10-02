@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { createGitAdapter } from "./git-adapter.js";
-import { handleSpaceWebhookRequest } from "./http.js";
+import { handleOrionWebhookRequest } from "./http.js";
 import {
   createOpenClawAgent,
   createOpenClawClassifier,
@@ -14,7 +14,7 @@ import {
   type AgentTurnRequest,
 } from "./openclaw-agent.js";
 import { DEFAULT_RUNNER_OPTIONS, MaintenanceRunner } from "./runner.js";
-import { createSpaceRuntime } from "./runtime.js";
+import { createOrionRuntime } from "./runtime.js";
 import { createShellAdapter } from "./shell-adapter.js";
 import { TaskService } from "./task-service.js";
 import { createSqliteTaskStore } from "./task-store.js";
@@ -69,8 +69,8 @@ describe("OpenClaw agent binding", () => {
     expect(req.message).toContain("ssh key"); // present only inside the wrapped data block
     expect(req.cwd).toBe("/w");
     expect(req.tools).toEqual(["group:fs", "group:runtime"]);
-    expect(req.tools.some((t) => /gmail|resend|message|calendar|space_task/.test(t))).toBe(false);
-    expect(req.sessionKey).toBe(`agent:main:space:${task.id}:investigate`);
+    expect(req.tools.some((t) => /gmail|resend|message|calendar|orion_task/.test(t))).toBe(false);
+    expect(req.sessionKey).toBe(`agent:main:orion:${task.id}:investigate`);
     // Self-review and PR text get no tools at all.
     await createOpenClawAgent({
       integration: "mock",
@@ -257,13 +257,13 @@ describe("gateway webhook stage", () => {
     const fx = createHewarFixture();
     const wsDir = mkdtempSync(join(tmpdir(), "ws-"));
     writeFileSync(join(wsDir, "hewar.json"), JSON.stringify(fx.manifest));
-    const rt = createSpaceRuntime({
+    const rt = createOrionRuntime({
       stateDir: mkdtempSync(join(tmpdir(), "st-")),
       workspacesDir: wsDir,
-      env: { SPACE_GITHUB_WEBHOOK_SECRET: "k" },
+      env: { ORION_GITHUB_WEBHOOK_SECRET: "k" },
     });
     const server = createServer((req, res) => {
-      void handleSpaceWebhookRequest(req, res, () => rt).then((handled) => {
+      void handleOrionWebhookRequest(req, res, () => rt).then((handled) => {
         if (!handled) {
           res.statusCode = 418;
           res.end();
@@ -292,13 +292,13 @@ describe("gateway webhook stage", () => {
     expect((await post("/other", body, {})).status).toBe(418);
     expect(
       (
-        await post("/space/github/webhook", body, {
+        await post("/orion/github/webhook", body, {
           "x-github-event": "issue_comment",
           "x-hub-signature-256": "sha256=00",
         })
       ).status,
     ).toBe(401);
-    const ok = await post("/space/github/webhook", body, {
+    const ok = await post("/orion/github/webhook", body, {
       "x-github-event": "issue_comment",
       "x-hub-signature-256": sig,
       "x-github-delivery": "d1",
