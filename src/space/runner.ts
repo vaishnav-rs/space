@@ -167,6 +167,38 @@ export class MaintenanceRunner {
     return { status: recorded.status, progressed: false, waiting: `retryable error: ${message}` };
   }
 
+  /** Creates the task's isolated branch/worktree once; later steps reuse it. */
+  private async ensureWorktree(task: MaintenanceTask): Promise<string | undefined> {
+    const repo = this.workspace.repository;
+    if (!repo) return undefined;
+    const existing = this.tasks.get(task.id).changes.worktree;
+    if (existing) return existing;
+    this.need("git.read", undefined, task);
+    this.need("git.write", undefined, task);
+    const issue =
+      task.source.kind === "github-issue"
+        ? task.source.issueNumber
+        : Number.parseInt(task.id.slice(0, 6), 16);
+    const branch = agentBranchName(repo.branchPrefix, this.workspace.id, issue);
+    const wt = await this.ports.git.createWorktree({
+      repoRoot: repo.root,
+      worktreesDir: repo.worktreesDir,
+      branch,
+      base: repo.defaultBranch,
+    });
+    this.tasks.apply(
+      task.id,
+      (t) =>
+        void (t.changes = { ...t.changes, branch, worktree: wt.worktree, baseSha: wt.baseSha }),
+      {
+        type: "worktree.created",
+        message: `Branch ${branch} in an isolated worktree`,
+        data: { branch },
+      },
+    );
+    return wt.worktree;
+  }
+
   private async gatherContext(task: MaintenanceTask): Promise<ContextResult> {
     this.need("knowledge.read", undefined, task);
     const ctx = await buildContext({
@@ -212,7 +244,10 @@ export class MaintenanceRunner {
         // Not permitted here: investigate from code and history instead.
       } else {
         // Production being unreachable must not stop the investigation; record it and carry on.
-        this.tasks.apply(task.id, () => {}, { type: "production.unavailable", message: `Production logs unavailable: ${redactSecrets(err instanceof Error ? err.message : String(err)).slice(0, 200)}` });
+        this.tasks.apply(task.id, () => {}, {
+          type: "production.unavailable",
+          message: `Production logs unavailable: ${redactSecrets(err instanceof Error ? err.message : String(err)).slice(0, 200)}`,
+        });
       }
     }
     if (out.logs) {
@@ -238,7 +273,10 @@ export class MaintenanceRunner {
       return;
     }
     if (this.ports.github.integration === "unavailable") {
-      this.tasks.apply(task.id, () => {}, { type: "notify.skipped", message: `Not posted (GitHub unavailable): ${message}` });
+      this.tasks.apply(task.id, () => {}, {
+        type: "notify.skipped",
+        message: `Not posted (GitHub unavailable): ${message}`,
+      });
       return;
     }
     try {
@@ -291,7 +329,14 @@ export class MaintenanceRunner {
           git = await this.ports.git.inspect(repo.root);
         }
         const production = await this.observe(task);
-        const result = await this.ports.agent.investigate({ task, context, git, production });
+        const worktree = await this.ensureWorktree(task);
+        const result = await this.ports.agent.investigate({
+          task: this.tasks.get(id),
+          context,
+          git,
+          production,
+          ...(worktree ? { worktree } : {}),
+        });
         for (const e of result.evidence) {
           this.tasks.addEvidence(id, e);
         }
@@ -379,38 +424,8 @@ export class MaintenanceRunner {
       case "FIXING":
       case "ADDRESSING_REVIEW": {
         if (!repo) throw new Error("workspace has no repository");
-        let worktree = task.changes.worktree;
-        if (!worktree) {
-          this.need("git.read", undefined, task);
-          this.need("git.write", undefined, task);
-          const issue =
-            task.source.kind === "github-issue"
-              ? task.source.issueNumber
-              : Number.parseInt(task.id.slice(0, 6), 16);
-          const branch = agentBranchName(repo.branchPrefix, this.workspace.id, issue);
-          const wt = await this.ports.git.createWorktree({
-            repoRoot: repo.root,
-            worktreesDir: repo.worktreesDir,
-            branch,
-            base: repo.defaultBranch,
-          });
-          this.tasks.apply(
-            id,
-            (t) =>
-              void (t.changes = {
-                ...t.changes,
-                branch,
-                worktree: wt.worktree,
-                baseSha: wt.baseSha,
-              }),
-            {
-              type: "worktree.created",
-              message: `Branch ${branch} in an isolated worktree`,
-              data: { branch },
-            },
-          );
-          worktree = wt.worktree;
-        }
+        const worktree = await this.ensureWorktree(task);
+        if (!worktree) throw new Error("no worktree available");
         this.need("filesystem.write", worktree, task);
         const fresh = this.tasks.get(id);
         const reason =
@@ -447,6 +462,25 @@ export class MaintenanceRunner {
         if (!worktree) throw new Error("no worktree to test");
         this.need("shell.execute", worktree, task);
         const diff = await this.ports.git.diffStat(worktree, task.changes.baseSha ?? "HEAD");
+        if (diff.files.length === 0 && task.changes.commits.length === 0) {
+          this.tasks.recordError(id, "the fix step produced no file changes", true);
+          if (
+            this.tasks.get(id).errors.filter((e) => e.stage === "TESTING").length >=
+            this.options.maxFixAttempts
+          ) {
+            return go(
+              this.tasks.handoff(
+                id,
+                "blocked",
+                "The agent made no changes after repeated attempts.",
+                "A human needs to look at this task.",
+              ).status,
+            );
+          }
+          return go(
+            this.tasks.transition(id, "FIXING", "No changes were made; retrying the fix").status,
+          );
+        }
         const cmds = this.workspace.commands;
         const testFiles = diff.files.filter((f) =>
           /(^|\/)(test|tests|__tests__)\/|\.(test|spec)\./.test(f),

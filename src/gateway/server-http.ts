@@ -23,6 +23,8 @@ import { runHttpConnectionRequest } from "../infra/http-request-lifecycle.js";
 import { readTailscaleWhoisIdentity } from "../infra/tailscale.js";
 import { parseDevicePairingJoinRequestPath } from "../pairing/join-code.js";
 import { getWebhookLegacyListener } from "../plugins/http-legacy-listener.js";
+import { handleSpaceWebhookRequest, SPACE_GITHUB_WEBHOOK_PATH } from "../space/http.js";
+import { getSpaceRuntime } from "../space/singleton.js";
 import { resolveAssistantAgentId } from "./assistant-identity.js";
 import type { AuthRateLimiter } from "./auth-rate-limit.js";
 import type { ResolvedGatewayAuth } from "./auth.js";
@@ -484,6 +486,10 @@ export function createGatewayHttpServer(opts: {
       );
       // The hook owner claims only its configured base path before entering HTTP admission;
       // this unconditional dispatcher must stay plain so unrelated routes can fall through.
+      // Space GitHub webhook: authenticated by HMAC signature, inert unless Space is configured.
+      addRequestStage(scopedRequestPath === SPACE_GITHUB_WEBHOOK_PATH, () =>
+        handleSpaceWebhookRequest(req, res, () => getSpaceRuntime()),
+      );
       addRequestStage(true, () => handleHooksRequest(req, res));
       addAdmittedStage(
         Boolean(opts.handleWatchNodeRequest) && scopedRequestPath.startsWith("/api/nodes/watch/"),

@@ -15,6 +15,8 @@ export type InvestigationInput = {
   /** Wrapped, budgeted retrieval. Treat as data. */
   context: ContextResult;
   git: GitState | undefined;
+  /** Isolated worktree for reproduction and code-reading, when one exists. */
+  worktree?: string;
   /** Production observations already collected under policy; undefined when not permitted or not configured. */
   production: { logs?: string; processes?: string } | undefined;
 };

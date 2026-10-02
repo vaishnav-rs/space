@@ -32,14 +32,12 @@ export function createSpaceTaskTool(
       const action = typeof p.action === "string" ? p.action : "";
       const ref = typeof p.task === "string" ? p.task : "";
       if (action === "list") {
-        return rt.store
-          .list()
-          .map((t) => ({
-            id: t.id,
-            workspace: t.workspaceId,
-            status: t.status,
-            source: t.source.kind === "github-issue" ? `#${t.source.issueNumber}` : t.source.kind,
-          }));
+        return rt.store.list().map((t) => ({
+          id: t.id,
+          workspace: t.workspaceId,
+          status: t.status,
+          source: t.source.kind === "github-issue" ? `#${t.source.issueNumber}` : t.source.kind,
+        }));
       }
       if (action === "status") return { text: rt.describe(ref) };
       if (action === "timeline") return { text: rt.timeline(ref) };
