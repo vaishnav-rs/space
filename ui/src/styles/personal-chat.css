@@ -1,0 +1,85 @@
+/* =============================================
+   PERSONAL SKIN: chat-first, WhatsApp / iMessage feel.
+   Opt-out: remove data-skin="chat" from <html>. Tokens only, no layout changes,
+   so every existing view keeps working.
+   ============================================= */
+
+:root[data-skin="chat"] {
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius: 14px;
+  --chat-out-bg: #1f8a5b; /* sent: messaging green */
+  --chat-out-fg: #ffffff;
+  --chat-in-bg: #232830; /* received */
+  --chat-in-fg: #eceef2;
+  --chat-wallpaper: #0b141a;
+  --accent: #25c27a;
+  --accent-hover: #3ad48b;
+  --accent-muted: #25c27a;
+  --accent-subtle: rgba(37, 194, 122, 0.12);
+  --accent-glow: rgba(37, 194, 122, 0.22);
+  --accent-foreground: #04170e;
+}
+
+:root[data-skin="chat"][data-theme-mode="light"],
+:root[data-skin="chat"][data-theme="light"] {
+  --chat-out-bg: #d9fdd3;
+  --chat-out-fg: #0b2a16;
+  --chat-in-bg: #ffffff;
+  --chat-in-fg: #1b1f24;
+  --chat-wallpaper: #efeae2;
+  --accent: #128c5a;
+  --accent-hover: #0f7a4e;
+  --accent-muted: #128c5a;
+  --accent-subtle: rgba(18, 140, 90, 0.1);
+  --accent-foreground: #ffffff;
+}
+
+:root[data-skin="chat"] :is(.chat-thread, .chat-thread-inner) {
+  background: var(--chat-wallpaper);
+}
+
+/* Bubbles: soft, tailed on the sender's side, tight grouping like a messenger. */
+:root[data-skin="chat"] .chat-group .chat-bubble:not(.chat-bubble--tool-shell) {
+  border: 0;
+  border-radius: 18px;
+  padding: 8px 12px;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 14%);
+  max-width: min(78%, 640px);
+}
+
+:root[data-skin="chat"] .chat-group.user .chat-bubble:not(.chat-bubble--tool-shell) {
+  background: var(--chat-out-bg);
+  color: var(--chat-out-fg);
+  border-end-end-radius: 4px;
+}
+
+:root[data-skin="chat"] .chat-group.assistant .chat-bubble:not(.chat-bubble--tool-shell) {
+  background: var(--chat-in-bg);
+  color: var(--chat-in-fg);
+  border-end-start-radius: 4px;
+}
+
+:root[data-skin="chat"] .chat-group.user .chat-bubble :is(a, .chat-text) {
+  color: inherit;
+}
+
+/* Composer: floating pill. */
+:root[data-skin="chat"] .agent-chat__input {
+  --chat-composer-radius: 26px;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 22%);
+}
+
+:root[data-skin="chat"] .agent-chat__input .chat-send-btn--send {
+  border-radius: 9999px;
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-skin="chat"] * {
+    scroll-behavior: auto;
+  }
+}

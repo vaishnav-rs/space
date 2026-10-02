@@ -45,6 +45,7 @@ import {
   createConversationsSendTool,
   createConversationsTurnTool,
 } from "./tools/conversation-tools.js";
+import { createPersonalTools, guardMessageTool } from "../personal/index.js";
 import { createCronTool } from "./tools/cron-tool.js";
 import { createDashboardTool } from "./tools/dashboard-tool.js";
 import { createDecisionTool } from "./tools/decision-tool.js";
@@ -223,7 +224,16 @@ export function createOpenClawTools(options?: OpenClawToolsOptions): AnyAgentToo
     hostnameAllowlistRef: options?.webFetchHostnameAllowlistRef,
   });
   options?.recordToolPrepStage?.("openclaw-tools:web-fetch-tool");
-  const messageTool = options?.disableMessageTool
+  // Personal layer: other people are contacted only when the owner asked in this turn.
+  const personalOptions = {
+    getOrigin: () => ({
+      ownerInitiated:
+        options?.senderIsOwner !== false &&
+        options?.gatewayCallerScheduled !== true &&
+        options?.sourceReplyOnly !== true,
+    }),
+  };
+  const rawMessageTool = options?.disableMessageTool
     ? null
     : createMessageTool({
         ...options,
@@ -244,6 +254,7 @@ export function createOpenClawTools(options?: OpenClawToolsOptions): AnyAgentToo
         requesterSenderId: options?.requesterSenderId ?? undefined,
         workspaceDir,
       });
+  const messageTool = rawMessageTool ? guardMessageTool(rawMessageTool, personalOptions) : null;
   const heartbeatTool = options?.enableHeartbeatTool ? createHeartbeatResponseTool() : null;
   options?.recordToolPrepStage?.("openclaw-tools:message-tool");
   const nodesToolBase = createNodesTool({
@@ -370,6 +381,7 @@ export function createOpenClawTools(options?: OpenClawToolsOptions): AnyAgentToo
         })
       : []),
     includeMessageTool ? messageTool : null,
+    ...createPersonalTools(personalOptions),
     !isCoreCanvasHostEnabled(resolvedConfig) &&
     !hasRegisteredShowWidgetKinds() &&
     !widgetPresentation.currentChannelPresenter

@@ -1,0 +1,19 @@
+// Merge into your OpenClaw config. Proactive by default: wakes often, quiet at night.
+{
+  commands: { ownerAllowFrom: ["whatsapp:+15550001111"] },
+  agents: {
+    defaults: {
+      heartbeat: {
+        every: "10m",
+        target: "owner",
+        directPolicy: "allow",
+        lightContext: false,
+        activeHours: { start: "07:30", end: "23:30" },
+        prompt:
+          "Proactive sweep. Check unread/important Gmail, today's calendar (next 3h), open PRs/reviews/CI on my repos, " +
+          "due Google Tasks, and my own plan progress. Message me on WhatsApp only when something needs me, " +
+          "is about to be late, or has an obvious next step you can propose. Otherwise reply NO_REPLY.",
+      },
+    },
+  },
+}
