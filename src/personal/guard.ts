@@ -80,3 +80,23 @@ export function guardEmailCall(
   }
   return decide(recipients, ownerEmails, origin);
 }
+
+export type TurnFacts = {
+  trigger?: string;
+  senderIsOwner?: boolean;
+  scheduled?: boolean;
+  sourceReplyOnly?: boolean;
+};
+
+/**
+ * Same notion of "interactive" the runner uses for bootstrap routing: only `user` and `manual`
+ * triggers are a person talking. Heartbeat, cron and unknown triggers fail closed.
+ */
+export function isOwnerInitiated(facts: TurnFacts): boolean {
+  return (
+    (facts.trigger === "user" || facts.trigger === "manual") &&
+    facts.senderIsOwner !== false &&
+    facts.scheduled !== true &&
+    facts.sourceReplyOnly !== true
+  );
+}

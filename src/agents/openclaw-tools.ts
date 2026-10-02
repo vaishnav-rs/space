@@ -4,6 +4,8 @@ import { createShowWidgetTool, hasRegisteredShowWidgetKinds } from "../canvas/wi
 import { getRuntimeConfig, selectApplicableRuntimeConfig } from "../config/config.js";
 import { resolveControlUiSessionLinkBase } from "../config/control-ui-link-base.js";
 import { isEmbeddedMode } from "../infra/embedded-mode.js";
+import { isOwnerInitiated } from "../personal/guard.js";
+import { createPersonalTools, guardMessageTool, guardOutboundTool } from "../personal/index.js";
 import { getActiveSecretsRuntimeConfigSnapshot } from "../secrets/runtime-state.js";
 import { getActiveRuntimeWebToolsMetadataFromState } from "../secrets/runtime-web-tools-state.js";
 import { isCronRunSessionKey } from "../sessions/session-key-utils.js";
@@ -45,7 +47,6 @@ import {
   createConversationsSendTool,
   createConversationsTurnTool,
 } from "./tools/conversation-tools.js";
-import { createPersonalTools, guardMessageTool } from "../personal/index.js";
 import { createCronTool } from "./tools/cron-tool.js";
 import { createDashboardTool } from "./tools/dashboard-tool.js";
 import { createDecisionTool } from "./tools/decision-tool.js";
@@ -227,10 +228,12 @@ export function createOpenClawTools(options?: OpenClawToolsOptions): AnyAgentToo
   // Personal layer: other people are contacted only when the owner asked in this turn.
   const personalOptions = {
     getOrigin: () => ({
-      ownerInitiated:
-        options?.senderIsOwner !== false &&
-        options?.gatewayCallerScheduled !== true &&
-        options?.sourceReplyOnly !== true,
+      ownerInitiated: isOwnerInitiated({
+        trigger: (options as { trigger?: string } | undefined)?.trigger,
+        senderIsOwner: options?.senderIsOwner,
+        scheduled: options?.gatewayCallerScheduled,
+        sourceReplyOnly: options?.sourceReplyOnly,
+      }),
     }),
   };
   const rawMessageTool = options?.disableMessageTool
@@ -470,13 +473,17 @@ export function createOpenClawTools(options?: OpenClawToolsOptions): AnyAgentToo
             createConversationsListTool,
             createConversationsSendTool,
             createConversationsTurnTool,
-          ].map((createTool) =>
-            createTool({
+          ].map((createTool) => {
+            const tool = createTool({
               ...options,
               agentId: sessionAgentId,
               agentSessionId: options?.sessionId,
-            }),
-          ),
+            });
+            // Delivering into an external conversation reaches other people.
+            return tool.name === "conversations_send" || tool.name === "conversations_turn"
+              ? guardOutboundTool(tool, personalOptions)
+              : tool;
+          }),
           // Keep the in-process caller so materialized agent roots retain their creation stamp.
           createSessionsSendTool({
             ...options,

@@ -40,3 +40,19 @@ export function guardMessageTool(tool: AnyAgentTool, options: PersonalToolsOptio
     },
   };
 }
+
+/** Tools that deliver into an exact external conversation have no recipient list to compare, so they need the owner's request. */
+export function guardOutboundTool(tool: AnyAgentTool, options: PersonalToolsOptions): AnyAgentTool {
+  const execute = tool.execute;
+  return {
+    ...tool,
+    execute: async (toolCallId, params, signal, onUpdate) => {
+      if (!options.getOrigin().ownerInitiated) {
+        throw new Error(
+          `Blocked: ${tool.name} contacts other people and requires the owner to ask for it in this turn. Draft it and message the owner instead.`,
+        );
+      }
+      return execute(toolCallId, params, signal, onUpdate);
+    },
+  };
+}

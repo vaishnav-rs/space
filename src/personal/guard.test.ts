@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { guardEmailCall, guardMessageCall } from "./guard.js";
+import { guardEmailCall, guardMessageCall, isOwnerInitiated } from "./guard.js";
 
 const owner = { ownerInitiated: true };
 const auto = { ownerInitiated: false };
@@ -44,5 +44,15 @@ describe("personal outbound guard", () => {
       false,
     );
     expect(guardEmailCall({ to: "boss@y.com" }, ["me@x.dev"], owner).allow).toBe(true);
+  });
+
+  it("treats only user/manual owner turns as owner-initiated", () => {
+    expect(isOwnerInitiated({ trigger: "user", senderIsOwner: true })).toBe(true);
+    expect(isOwnerInitiated({ trigger: "manual" })).toBe(true);
+    expect(isOwnerInitiated({ trigger: "heartbeat", senderIsOwner: true })).toBe(false);
+    expect(isOwnerInitiated({ trigger: "cron" })).toBe(false);
+    expect(isOwnerInitiated({})).toBe(false);
+    expect(isOwnerInitiated({ trigger: "user", senderIsOwner: false })).toBe(false);
+    expect(isOwnerInitiated({ trigger: "user", scheduled: true })).toBe(false);
   });
 });
