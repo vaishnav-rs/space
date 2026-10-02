@@ -2,8 +2,9 @@ import { Type } from "typebox";
 import type { AnyAgentTool } from "../agents/tools/common.js";
 import { personalTool, optStr } from "../personal/tool-kit.js";
 import type { SpaceRuntime } from "./runtime.js";
+import { routeRequest } from "./workspace-routing.js";
 
-const ACTIONS = ["list", "status", "timeline", "stop", "retry", "approve"] as const;
+const ACTIONS = ["create", "list", "status", "timeline", "stop", "retry", "approve"] as const;
 
 /**
  * Lets the assistant answer "what's happening with issue 184?" and steer tasks in plain language.
@@ -22,6 +23,10 @@ export function createSpaceTaskTool(
       action: Type.String({ enum: [...ACTIONS] }),
       task: optStr("Task id or issue number, e.g. 184."),
       capability: optStr("For approve: the capability the task asked for."),
+      report: optStr(
+        "For create: the complaint exactly as the developer relayed it, e.g. 'Client says profile upload is broken'.",
+      ),
+      workspace: optStr("For create: workspace id; inferred from the report when omitted."),
     }),
     run: async (p) => {
       const rt = getRuntime();
@@ -43,6 +48,41 @@ export function createSpaceTaskTool(
       if (action === "timeline") return { text: rt.timeline(ref) };
       if (!ownerInitiated())
         throw new Error(`${action} changes a task and needs you to ask for it directly.`);
+      if (action === "create") {
+        const report = typeof p.report === "string" ? p.report.trim() : "";
+        if (!report) throw new Error("create needs the report text");
+        const route = routeRequest(
+          report,
+          rt.registry,
+          typeof p.workspace === "string" ? p.workspace : undefined,
+        );
+        const ws = rt.registry.get(route.workspaceId);
+        if (!ws || ws.kind !== "project") {
+          const known =
+            rt.registry
+              .list()
+              .filter((w) => w.kind === "project")
+              .map((w) => w.id)
+              .join(", ") || "none";
+          throw new Error(
+            `No project workspace matches this report (${route.reason}). Say which project it is for. Known: ${known}`,
+          );
+        }
+        const created = rt.tasks.create({
+          workspaceId: ws.id,
+          source: { kind: "chat", channel: "assistant" },
+          reporter: { name: "owner" },
+          report,
+        });
+        // Start now; the scheduler keeps polling if this turn ends first.
+        void rt.tick().catch(() => {});
+        return {
+          taskId: created.id,
+          workspace: ws.id,
+          status: created.status,
+          note: "Investigation started.",
+        };
+      }
       const task = rt.findTask(ref);
       if (!task) throw new Error(`No task found for ${ref}`);
       if (action === "stop")

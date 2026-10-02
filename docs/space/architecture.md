@@ -33,14 +33,21 @@ Definition of done (`evaluateCompletion`): report recorded, problem understood, 
 
 Real and tested against a real git repository: workspaces, policy, task engine, runner, git/shell/production/GitHub/knowledge adapters, webhook handling, status and timeline, resume after restart.
 
-Not yet bound (reported as `unavailable`, tasks block with the exact reason rather than faking progress):
+Bound to OpenClaw but **not exercised live in this repository's tests** (the tests drive the same code with a scripted model turn):
 
-- **Agent runtime binding.** `AgentPort` (investigate, reproduce, diagnose, fix, self-review, PR text) and `FindingClassifier` need an implementation that runs OpenClaw agent turns inside the task's worktree. Until then `createUnavailableAgent()` / `createUnavailableClassifier()` are used.
-- **Webhook mount.** `SpaceRuntime.webhook(rawBody, headers)` is transport-agnostic; it still needs to be mounted on a gateway HTTP route (or an existing hook mapping).
-- **Scheduler.** Call `SpaceRuntime.tick()` on boot and from an automation job to resume and poll CI/review.
-- **Graphify export format.** `createGraphKnowledge` assumes `{nodes, edges}` JSON; adjust to the real export.
-- **Persistence location.** Tasks live in their own SQLite file (`space-tasks.sqlite`). The repository's storage policy prefers the shared state database via its migration owner; moving there needs a schema-version review.
-- **Production mutation.** Not implemented. Only observation exists; mutation capabilities are approval-gated placeholders.
+- **Agent turns** (`openclaw-agent.ts`, `agent-turn-runner.ts`): each step is one system-ingress OpenClaw run in its own session, `cwd` = the task worktree, no message tool, not owner-authored, tool allowlist `group:fs` (+ `group:runtime` for steps that must run code; none for self-review and PR text). Output is JSON-validated with one repair attempt; certainty without evidence is downgraded; the review classifier escalates anything it skips.
+- **Webhook**: `POST /space/github/webhook` is a gateway HTTP stage (`http.ts`), authenticated by HMAC signature, inert unless Space is configured.
+- **Scheduler**: started at gateway startup (`startSpaceScheduler`); resumes unfinished tasks immediately, then polls every 60 s for CI and review state.
+- **Chat entry**: the assistant's `space_task` tool (`create`, `list`, `status`, `timeline`, `stop`, `retry`, `approve`). Mutations require an owner-initiated turn.
+
+Still incomplete or risky:
+
+- **Agent shell environment.** `group:runtime` lets a model turn run shell commands in the worktree with the gateway's environment. Run Space under a dedicated low-privilege account and use OpenClaw's sandbox for these runs before pointing it at production-connected credentials.
+- **Live proof.** No run against a real model, the real GitHub API, Copilot review or a real SSH host has been made. Graphify's export format is an assumption.
+- **Persistence location.** Tasks live in `space-tasks.sqlite`; the repository's storage policy prefers the shared state database via its migration owner.
+- **Production mutation.** Not implemented; only observation exists.
+- **Stale worktrees.** Worktrees for tasks that end in `NEEDS_INFORMATION` are not garbage-collected yet.
+- **OpenClaw-maintainer profile.** Classified in `openclaw-machinery-audit.md`, not yet switchable.
 
 ## Configuration
 

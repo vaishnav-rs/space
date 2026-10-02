@@ -163,6 +163,17 @@ describe("runtime: webhook in, status out, resume after restart", () => {
       ).execute("1", p);
     await expect(call(false, { action: "status", task: "5" })).resolves.toBeDefined();
     await expect(call(false, { action: "stop", task: "5" })).rejects.toThrow(/ask for it directly/);
+    await expect(
+      call(false, { action: "create", report: "Client says profile upload is broken" }),
+    ).rejects.toThrow(/ask for it directly/);
+    await expect(call(true, { action: "create", report: "remind me about lunch" })).rejects.toThrow(
+      /No project workspace/,
+    );
+    const created = (await call(true, {
+      action: "create",
+      report: "Client says the Hewar profile upload is broken",
+    })) as { content?: unknown };
+    expect(JSON.stringify(created)).toContain("hewar");
     await expect(call(true, { action: "stop", task: "5" })).resolves.toBeDefined();
     expect(rt.findTask("5")?.status).toBe("BLOCKED");
   });
