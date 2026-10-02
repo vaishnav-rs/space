@@ -15,8 +15,8 @@ type ViteImportMeta = ImportMeta & {
   };
 };
 
-// Chat-first personal skin; delete this attribute to fall back to the stock look.
-document.documentElement.dataset.skin = "chat";
+// Orion skin; delete this attribute to fall back to the stock look.
+document.documentElement.dataset.skin = "orion";
 
 const isProd = (import.meta as ViteImportMeta).env?.PROD === true;
 const currentControlUiBuildId = CONTROL_UI_BUILD_INFO.buildId;

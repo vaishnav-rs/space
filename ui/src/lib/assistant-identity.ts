@@ -17,7 +17,7 @@ type AssistantIdentityField = keyof typeof ASSISTANT_IDENTITY_LIMITS;
 const SAME_ORIGIN_AVATAR_URL_RE = /^\/(?!\/)/;
 const URI_SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i;
 
-const DEFAULT_ASSISTANT_NAME = "Assistant";
+const DEFAULT_ASSISTANT_NAME = "Orion";
 export const DEFAULT_ASSISTANT_AVATAR = "A";
 
 export type AssistantIdentity = {

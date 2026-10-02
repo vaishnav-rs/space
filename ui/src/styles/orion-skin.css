@@ -1,0 +1,261 @@
+/* =============================================
+   ORION SKIN
+   Night-sky chat: deep ink surfaces, a faint star field, one luminous
+   periwinkle→violet accent, glass panels and soft, readable bubbles.
+   Tokens and presentation only; layout and behavior are untouched.
+   Opt out by removing data-skin="orion" from <html> (see main.ts).
+   ============================================= */
+
+:root[data-skin="orion"] {
+  --orion-ink-0: #070a16;
+  --orion-ink-1: #0b1020;
+  --orion-ink-2: #11172e;
+  --orion-ink-3: #182040;
+  --orion-line: rgba(160, 178, 255, 0.11);
+  --orion-line-strong: rgba(160, 178, 255, 0.2);
+  --orion-glow: rgba(124, 140, 255, 0.35);
+  --orion-grad: linear-gradient(135deg, #6f86ff 0%, #8f6bff 55%, #b46bff 100%);
+  --orion-grad-soft: linear-gradient(135deg, rgba(111, 134, 255, 0.18), rgba(180, 107, 255, 0.12));
+  --orion-star: rgba(214, 224, 255, 0.55);
+
+  --bg: var(--orion-ink-1);
+  --bg-accent: var(--orion-ink-0);
+  --bg-elevated: var(--orion-ink-2);
+  --bg-hover: rgba(124, 140, 255, 0.1);
+  --bg-muted: rgba(124, 140, 255, 0.07);
+  --card: var(--orion-ink-2);
+  --panel: var(--orion-ink-1);
+  --panel-strong: var(--orion-ink-2);
+  --panel-hover: rgba(124, 140, 255, 0.1);
+  --border: var(--orion-line);
+  --border-strong: var(--orion-line-strong);
+  --border-hover: rgba(160, 178, 255, 0.34);
+  --text: #b9c1de;
+  --text-strong: #f3f5ff;
+  --muted: #7f89ad;
+
+  --accent: #8fa1ff;
+  --accent-hover: #a9b6ff;
+  --accent-muted: #8fa1ff;
+  --accent-subtle: rgba(143, 161, 255, 0.13);
+  --accent-glow: rgba(143, 161, 255, 0.28);
+  --accent-foreground: #0a0f24;
+  --bg-content: var(--orion-ink-1);
+  --card-foreground: #eef0ff;
+  --popover: #141a36;
+  --popover-foreground: #eef0ff;
+  --chrome: rgba(11, 16, 32, 0.86);
+  --chrome-strong: rgba(9, 13, 28, 0.94);
+  --chat-text: #c6cde6;
+  --muted-strong: #a3acd0;
+  --muted-foreground: #7f89ad;
+  --input: var(--orion-line-strong);
+  --ring: #8fa1ff;
+  --primary: #8fa1ff;
+  --primary-foreground: #0a0f24;
+  --secondary: var(--orion-ink-3);
+  --secondary-foreground: #c6cde6;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius: 12px;
+
+  --chat-in-bg: rgba(255, 255, 255, 0.045);
+  --chat-in-fg: #e6e9fa;
+  --chat-in-border: rgba(160, 178, 255, 0.13);
+  --chat-out-fg: #ffffff;
+}
+
+:root[data-skin="orion"][data-theme-mode="light"],
+:root[data-skin="orion"][data-theme="light"] {
+  --orion-ink-0: #eef0fb;
+  --orion-ink-1: #f6f7fd;
+  --orion-ink-2: #ffffff;
+  --orion-ink-3: #eceefa;
+  --orion-line: rgba(70, 86, 160, 0.12);
+  --orion-line-strong: rgba(70, 86, 160, 0.22);
+  --orion-glow: rgba(99, 102, 241, 0.25);
+  --orion-grad: linear-gradient(135deg, #5b73ff 0%, #7c5cff 60%, #9d5cf5 100%);
+  --orion-grad-soft: linear-gradient(135deg, rgba(91, 115, 255, 0.12), rgba(157, 92, 245, 0.08));
+  --orion-star: rgba(91, 115, 255, 0.25);
+  --bg-hover: rgba(91, 115, 255, 0.08);
+  --bg-muted: rgba(91, 115, 255, 0.05);
+  --text: #475070;
+  --text-strong: #12172e;
+  --muted: #7a84a8;
+  --accent: #5b6cff;
+  --accent-hover: #4a5bf0;
+  --accent-muted: #5b6cff;
+  --accent-subtle: rgba(91, 108, 255, 0.1);
+  --accent-glow: rgba(91, 108, 255, 0.22);
+  --accent-foreground: #ffffff;
+  --bg-content: var(--orion-ink-1);
+  --card-foreground: #12172e;
+  --popover: #ffffff;
+  --popover-foreground: #12172e;
+  --chrome: rgba(246, 247, 253, 0.9);
+  --chrome-strong: rgba(246, 247, 253, 0.96);
+  --chat-text: #353d62;
+  --muted-strong: #5a6490;
+  --muted-foreground: #7a84a8;
+  --input: var(--orion-line-strong);
+  --ring: #5b6cff;
+  --primary: #5b6cff;
+  --primary-foreground: #ffffff;
+  --secondary: var(--orion-ink-3);
+  --secondary-foreground: #353d62;
+  --chat-in-bg: #ffffff;
+  --chat-in-fg: #1b2140;
+  --chat-in-border: rgba(70, 86, 160, 0.12);
+}
+
+/* Canvas: ink with a quiet aurora and a sparse star field. */
+:root[data-skin="orion"] body {
+  background:
+    radial-gradient(1100px 600px at 12% -10%, rgba(111, 134, 255, 0.13), transparent 60%),
+    radial-gradient(900px 520px at 100% 0%, rgba(180, 107, 255, 0.09), transparent 55%),
+    var(--orion-ink-1);
+}
+
+:root[data-skin="orion"] :is(.shell, .shell--chat) {
+  background:
+    radial-gradient(1.2px 1.2px at 18% 22%, var(--orion-star), transparent 60%),
+    radial-gradient(1px 1px at 72% 14%, var(--orion-star), transparent 60%),
+    radial-gradient(1.4px 1.4px at 86% 58%, var(--orion-star), transparent 60%),
+    radial-gradient(1px 1px at 38% 78%, var(--orion-star), transparent 60%),
+    radial-gradient(1.2px 1.2px at 58% 40%, var(--orion-star), transparent 60%), transparent;
+}
+
+/* Sidebar: frosted glass with a gradient hairline. */
+:root[data-skin="orion"] aside.sidebar {
+  background: linear-gradient(180deg, rgba(17, 23, 46, 0.78), rgba(9, 13, 28, 0.82));
+  backdrop-filter: blur(18px) saturate(140%);
+  border-inline-end: 1px solid var(--orion-line);
+}
+
+:root[data-skin="orion"][data-theme-mode="light"] aside.sidebar,
+:root[data-skin="orion"][data-theme="light"] aside.sidebar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(240, 243, 253, 0.86));
+}
+
+:root[data-skin="orion"] .nav-item {
+  border-radius: 12px;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+:root[data-skin="orion"] .nav-item:hover {
+  background: var(--bg-hover);
+}
+
+:root[data-skin="orion"] .nav-item--active {
+  background: var(--orion-grad-soft);
+  color: var(--text-strong);
+  box-shadow:
+    inset 0 0 0 1px var(--orion-line-strong),
+    0 6px 20px -10px var(--orion-glow);
+}
+
+:root[data-skin="orion"] .nav-item--active .nav-item__icon {
+  color: var(--accent);
+}
+
+:root[data-skin="orion"] .sidebar-recent-session {
+  border-radius: 10px;
+}
+
+:root[data-skin="orion"] .topbar {
+  background: transparent;
+  border-block-end: 1px solid var(--orion-line);
+  backdrop-filter: blur(14px);
+}
+
+/* Bubbles */
+:root[data-skin="orion"] .chat-group .chat-bubble:not(.chat-bubble--tool-shell) {
+  border: 1px solid transparent;
+  border-radius: 20px;
+  padding: 10px 15px;
+  line-height: 1.55;
+  max-width: min(78%, 680px);
+  box-shadow: none;
+}
+
+:root[data-skin="orion"] .chat-group.user .chat-bubble:not(.chat-bubble--tool-shell) {
+  background: var(--orion-grad);
+  color: var(--chat-out-fg);
+  border-end-end-radius: 6px;
+  box-shadow:
+    0 10px 28px -14px var(--orion-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+:root[data-skin="orion"] .chat-group.assistant .chat-bubble:not(.chat-bubble--tool-shell) {
+  background: var(--chat-in-bg);
+  color: var(--chat-in-fg);
+  border-color: var(--chat-in-border);
+  border-end-start-radius: 6px;
+  backdrop-filter: blur(10px);
+}
+
+:root[data-skin="orion"] .chat-group.user .chat-bubble :is(a, .chat-text, p, li, code) {
+  color: inherit;
+}
+
+:root[data-skin="orion"] .chat-group.user .chat-bubble a {
+  text-decoration-color: rgba(255, 255, 255, 0.55);
+}
+
+/* Composer: a floating glass pill that lights up on focus. */
+:root[data-skin="orion"] .agent-chat__input {
+  --chat-composer-radius: 28px;
+  background: linear-gradient(180deg, rgba(24, 32, 64, 0.72), rgba(14, 20, 42, 0.78));
+  border: 1px solid var(--orion-line-strong);
+  backdrop-filter: blur(20px) saturate(150%);
+  box-shadow:
+    0 18px 48px -24px rgba(0, 0, 0, 0.7),
+    0 0 0 0 var(--orion-glow);
+  transition:
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+}
+
+:root[data-skin="orion"][data-theme-mode="light"] .agent-chat__input,
+:root[data-skin="orion"][data-theme="light"] .agent-chat__input {
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 14px 40px -22px rgba(60, 72, 150, 0.35);
+}
+
+:root[data-skin="orion"] .agent-chat__input:focus-within {
+  border-color: rgba(143, 161, 255, 0.55);
+  box-shadow:
+    0 18px 48px -24px rgba(0, 0, 0, 0.7),
+    0 0 0 4px rgba(143, 161, 255, 0.14);
+}
+
+:root[data-skin="orion"] .agent-chat__input .chat-send-btn--send {
+  border-radius: 9999px;
+  background: var(--orion-grad);
+  color: #fff;
+  box-shadow: 0 8px 20px -8px var(--orion-glow);
+}
+
+/* Quiet, thin scrollbars. */
+:root[data-skin="orion"] * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(143, 161, 255, 0.28) transparent;
+}
+
+:root[data-skin="orion"] ::selection {
+  background: rgba(143, 161, 255, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-skin="orion"] * {
+    transition: none !important;
+    scroll-behavior: auto;
+  }
+}
