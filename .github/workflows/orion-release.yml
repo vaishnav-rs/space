@@ -136,15 +136,16 @@ jobs:
       - name: Pack (builds, then creates the self-contained package)
         run: |
           set -euo pipefail
-          mkdir -p dist
-          node scripts/package-openclaw-for-docker.mjs --allow-unreleased-changelog --output-dir dist
-          cp scripts/orion-setup.sh scripts/orion-setup.mts dist/
-          ls -la dist
+          # The output folder must not be the repository's dist/ (that is the build output being packed).
+          mkdir -p release-out
+          node scripts/package-openclaw-for-docker.mjs --allow-unreleased-changelog --output-dir release-out
+          cp scripts/orion-setup.sh scripts/orion-setup.mts release-out/
+          ls -la release-out
 
       - uses: actions/upload-artifact@v4
         with:
           name: orion-gateway
-          path: dist/*
+          path: release-out/*
 
   publish:
     name: Publish release
