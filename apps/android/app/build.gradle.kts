@@ -426,6 +426,8 @@ android {
   }
 
   androidResources {
+    // The bundled gateway and runtime are already gzip archives.
+    noCompress += listOf("gz")
     generateLocaleConfig = true
     localeFilters +=
       listOf(
@@ -460,6 +462,8 @@ android {
   }
 
   packaging {
+    // Executables ship as lib*.so and must exist on disk (exec is only allowed from the native library directory).
+    jniLibs.useLegacyPackaging = true
     resources {
       excludes +=
         setOf(

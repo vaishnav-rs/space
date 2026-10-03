@@ -33,6 +33,9 @@ class NodeApp : Application() {
   private var runtimeInstance: NodeRuntime? = null
   private val nodeServiceControlLock = Any()
 
+  /** The gateway that runs on this phone (see ondevice/). */
+  val onDeviceGateway: ai.openclaw.app.ondevice.OnDeviceGateway by lazy { ai.openclaw.app.ondevice.OnDeviceGateway(this, runtimeScope) }
+
   private class NodeServiceIntent
 
   private val nodeServiceIntent = AtomicReference<NodeServiceIntent?>(NodeServiceIntent())

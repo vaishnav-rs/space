@@ -1694,6 +1694,8 @@ class MainViewModel private constructor(
 
   suspend fun loadBoard(sessionKey: String): NativeBoard = ensureRuntime().loadBoard(sessionKey)
 
+  internal val onDeviceGateway: ai.openclaw.app.ondevice.OnDeviceGateway get() = nodeApp.onDeviceGateway
+
   val nativeTerminal: NativeTerminalSession get() = ensureRuntime().nativeTerminal
 
   val nativeDesktop: NativeDesktopSession get() = ensureRuntime().nativeDesktop

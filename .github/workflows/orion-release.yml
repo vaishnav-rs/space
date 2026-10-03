@@ -39,6 +39,18 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Bundle the on-device runtime (Node, git, ssh from Termux) and the gateway
+        run: |
+          set -euo pipefail
+          node apps/android/scripts/fetch-termux-runtime.mjs
+          apps/android/scripts/bundle-gateway.sh
+
       - name: Prepare signing key
         # Set ORION_ANDROID_KEYSTORE_BASE64, ORION_ANDROID_KEYSTORE_PASSWORD, ORION_ANDROID_KEY_ALIAS and
         # ORION_ANDROID_KEY_PASSWORD as repository secrets so every release is signed by the same key and

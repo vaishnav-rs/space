@@ -197,6 +197,7 @@ internal fun SettingsDetailScreen(
     SettingsRoute.SystemAgent -> SystemAgentSettingsScreen(viewModel = viewModel, onBack = onBack)
     SettingsRoute.NodesDevices -> NodesDevicesSettingsScreen(viewModel = viewModel, onBack = onBack)
     SettingsRoute.Channels -> ChannelsSettingsScreen(viewModel = viewModel, onBack = onBack)
+    SettingsRoute.OnDevice -> OnDeviceGatewaySettingsScreen(viewModel = viewModel, onBack = onBack)
     SettingsRoute.Orion -> OrionAdminSettingsScreen(viewModel = viewModel, onBack = onBack)
     SettingsRoute.Dreaming -> DreamingSettingsScreen(viewModel = viewModel, onBack = onBack)
     SettingsRoute.Terminal -> NativeTerminalScreen(viewModel = viewModel, onBack = onBack)
