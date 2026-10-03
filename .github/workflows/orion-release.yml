@@ -140,7 +140,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          pnpm pack --pack-destination dist
+          npm pack --pack-destination dist
           cp scripts/orion-setup.sh scripts/orion-setup.mts dist/
           ls -la dist
 

@@ -9,7 +9,7 @@ rm -rf "$STAGE"
 mkdir -p "$STAGE/pkg" "$OUT"
 cd "$ROOT"
 pnpm install --no-frozen-lockfile
-pnpm pack --pack-destination "$STAGE"
+npm pack --pack-destination "$STAGE"
 tar -xzf "$STAGE"/openclaw-*.tgz -C "$STAGE/pkg" --strip-components=1
 cd "$STAGE/pkg"
 # Production dependencies only. Native add-ons prebuilt for desktop Linux are useless on Android, so
