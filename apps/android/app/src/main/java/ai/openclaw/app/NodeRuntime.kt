@@ -3123,7 +3123,8 @@ class NodeRuntime private constructor(
           val sessionKey = start?.get("sessionKey").asStringOrNull()
           var message = start?.get("message").asStringOrNull()
           while (true) {
-            val png = qr?.let(::decodePngDataUrl) ?: error(message ?: "WhatsApp did not return a QR code.")
+            val currentQr = qr ?: error(message ?: "WhatsApp did not return a QR code.")
+            val png = decodePngDataUrl(currentQr) ?: error("WhatsApp returned an unreadable QR code.")
             mutableOrionPairing.value = OrionPairingState.WhatsAppQr(png, message)
             val wait =
               json
@@ -3135,7 +3136,7 @@ class NodeRuntime private constructor(
                       put("channel", JsonPrimitive("whatsapp"))
                       put("timeoutMs", JsonPrimitive(120_000))
                       if (sessionKey != null) put("sessionKey", JsonPrimitive(sessionKey))
-                      if (qr != null) put("currentQrDataUrl", JsonPrimitive(qr))
+                      put("currentQrDataUrl", JsonPrimitive(currentQr))
                     }.toString(),
                     timeoutMs = 135_000,
                   ),
