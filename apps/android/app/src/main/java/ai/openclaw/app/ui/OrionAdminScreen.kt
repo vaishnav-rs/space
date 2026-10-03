@@ -531,7 +531,7 @@ private fun TasksTab(
         onClick = { expanded = if (expanded == t.id) "" else t.id },
       )
       if (expanded == t.id) {
-        Text(t.summary, style = ClawTheme.type.code, color = ClawTheme.colors.text)
+        Text(t.summary, style = ClawTheme.type.mono, color = ClawTheme.colors.text)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
           t.pullRequest?.let { url -> ClawSecondaryButton("Open PR", onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }) }
           if (s.can("tasks.steer")) {
