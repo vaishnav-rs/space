@@ -474,7 +474,7 @@ class MainViewModel private constructor(
     }
     prefs.setOnboardingCompleted(true)
     prefs.setAppearanceThemeMode(AppearanceThemeMode.Dark)
-    prefs.setAppearanceThemeFamily(AppearanceThemeFamily.Claw)
+    prefs.setAppearanceThemeFamily(AppearanceThemeFamily.Orion)
     prefs.setAppearanceAccentArgb(null)
     prefs.setDisplayName("Pixel")
     prefs.setSpeakerEnabled(true)
@@ -611,6 +611,10 @@ class MainViewModel private constructor(
   val devicePairingMutation: StateFlow<GatewayDevicePairingMutation?> =
     runtimeState(initial = null) { it.devicePairingMutation }
   internal val channelsState = runtimeState(initial = GatewaySummaryState<GatewayChannelsSummary>()) { it.channelsState }
+  internal val orionState = runtimeState(initial = GatewaySummaryState<OrionAdminSummary>()) { it.orionState }
+  internal val orionNotice = runtimeState(initial = null as OrionNotice?) { it.orionNotice }
+  internal val orionBusy = runtimeState(initial = false) { it.orionBusy }
+  internal val orionPairing = runtimeState(initial = OrionPairingState.Idle as OrionPairingState) { it.orionPairing }
   internal val dreamingState = runtimeState(initial = GatewaySummaryState<GatewayDreamingSummary>()) { it.dreamingState }
   internal val healthLogsState = runtimeState(initial = GatewaySummaryState<GatewayHealthLogsSummary>()) { it.healthLogsState }
   val pendingGatewayTrust: StateFlow<NodeRuntime.GatewayTrustPrompt?> = runtimeState(initial = null) { it.pendingGatewayTrust }
@@ -1311,7 +1315,8 @@ class MainViewModel private constructor(
 
   fun setAppearanceThemeFamily(family: AppearanceThemeFamily) {
     val pendingScope = runtimeRef.value?.appearancePreferenceScopeForEdit()
-    val retainLocal = pendingScope == null
+    // Orion is an Android-local theme until the gateway's theme catalog knows it; never queue it for sync.
+    val retainLocal = pendingScope == null || family == AppearanceThemeFamily.Orion
     prefs.setAppearanceThemeFamily(
       family = family,
       pendingSync = !retainLocal,
@@ -1685,6 +1690,33 @@ class MainViewModel private constructor(
 
   fun dismissExecApprovalsNotice(expected: GatewayExecApprovalNotice) {
     ensureRuntime().dismissExecApprovalsNotice(expected)
+  }
+
+  fun refreshOrion() {
+    ensureRuntime().refreshOrion()
+  }
+
+  fun dismissOrionNotice() {
+    ensureRuntime().dismissOrionNotice()
+  }
+
+  fun applyOrionOp(
+    opJson: String,
+    successText: String,
+  ) {
+    ensureRuntime().applyOrionOp(opJson, successText)
+  }
+
+  fun startWhatsAppPairing(force: Boolean = false) {
+    ensureRuntime().startWhatsAppPairing(force)
+  }
+
+  fun startGitHubPairing() {
+    ensureRuntime().startGitHubPairing()
+  }
+
+  fun cancelOrionPairing() {
+    ensureRuntime().cancelOrionPairing()
   }
 
   fun refreshChannels() {

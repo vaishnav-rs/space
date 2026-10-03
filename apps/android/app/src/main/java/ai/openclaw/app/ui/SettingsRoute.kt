@@ -34,6 +34,7 @@ internal enum class SettingsRoute(
   SystemAgent(nativeText("OpenClaw"), ClawIcons.OpenClaw, null),
   NodesDevices(nativeText("Nodes & Devices"), ClawIcons.Devices, SettingsCategory.Connection),
   Channels(nativeText("Channels"), ClawIcons.Channels, SettingsCategory.Connection),
+  Orion(nativeText("Orion admin"), ClawIcons.Profile, SettingsCategory.Connection),
   Dreaming(nativeText("Dreaming"), ClawIcons.Memory, SettingsCategory.Workspace),
   Terminal(nativeText("Terminal"), ClawIcons.Terminal, SettingsCategory.Workspace),
   Desktop(nativeText("Desktop"), ClawIcons.Desktop, SettingsCategory.Workspace),

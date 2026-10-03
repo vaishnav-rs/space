@@ -1492,6 +1492,17 @@ class NodeRuntime private constructor(
 
   private val channelsSummary = GatewaySummaryOwner<GatewayChannelsSummary>()
   val channelsState: StateFlow<GatewaySummaryState<GatewayChannelsSummary>> = channelsSummary.state
+
+  // Orion admin: people, connections, tasks, plus pairing flows (WhatsApp QR, GitHub device code).
+  private val orionSummary = GatewaySummaryOwner<OrionAdminSummary>()
+  val orionState: StateFlow<GatewaySummaryState<OrionAdminSummary>> = orionSummary.state
+  private val mutableOrionNotice = MutableStateFlow<OrionNotice?>(null)
+  val orionNotice: StateFlow<OrionNotice?> = mutableOrionNotice.asStateFlow()
+  private val mutableOrionBusy = MutableStateFlow(false)
+  val orionBusy: StateFlow<Boolean> = mutableOrionBusy.asStateFlow()
+  private val mutableOrionPairing = MutableStateFlow<OrionPairingState>(OrionPairingState.Idle)
+  val orionPairing: StateFlow<OrionPairingState> = mutableOrionPairing.asStateFlow()
+  private var orionPairingJob: Job? = null
   private val dreamingSummary = GatewaySummaryOwner<GatewayDreamingSummary>()
   val dreamingState: StateFlow<GatewaySummaryState<GatewayDreamingSummary>> = dreamingSummary.state
   private val healthLogsSummary = GatewaySummaryOwner<GatewayHealthLogsSummary>()
@@ -1982,6 +1993,9 @@ class NodeRuntime private constructor(
     }
     mutableExecApprovalInbox.value = GatewayExecApprovalInboxState()
     channelsSummary.reset()
+    orionSummary.reset()
+    orionPairingJob?.cancel()
+    mutableOrionPairing.value = OrionPairingState.Idle
     dreamingSummary.reset()
     healthLogsSummary.reset()
   }
@@ -3031,6 +3045,159 @@ class NodeRuntime private constructor(
   }
 
   fun refreshChannels() = launchGatewayRefresh { refreshChannelsFromGateway() }
+
+  fun refreshOrion() = launchGatewayRefresh { refreshOrionFromGateway() }
+
+  fun dismissOrionNotice() {
+    mutableOrionNotice.value = null
+  }
+
+  /** Applies one `orion.admin.apply` operation, then reloads the overview. The gateway enforces roles. */
+  fun applyOrionOp(
+    opJson: String,
+    successText: String,
+  ) {
+    if (mode == NodeRuntimeMode.ScreenshotFixture || mutableOrionBusy.value) return
+    mutableOrionBusy.value = true
+    mutableOrionNotice.value = null
+    scope.launch {
+      try {
+        val gatewayScope = captureGatewayDataScope() ?: error("Not connected to a gateway.")
+        requestGatewayData(gatewayScope, "orion.admin.apply", opJson)
+        mutableOrionNotice.value = OrionNotice(successText, isError = false)
+        refreshOrionFromGateway()
+      } catch (err: CancellationException) {
+        throw err
+      } catch (err: Throwable) {
+        mutableOrionNotice.value = OrionNotice(err.message?.takeIf { it.isNotBlank() } ?: "That did not work.", isError = true)
+      } finally {
+        mutableOrionBusy.value = false
+      }
+    }
+  }
+
+  fun cancelOrionPairing() {
+    val current = mutableOrionPairing.value
+    orionPairingJob?.cancel()
+    orionPairingJob = null
+    mutableOrionPairing.value = OrionPairingState.Idle
+    if (current is OrionPairingState.GitHubCode) {
+      scope.launch {
+        runCatching {
+          val gatewayScope = captureGatewayDataScope() ?: return@runCatching
+          requestGatewayData(gatewayScope, "users.github.authorize.cancel", buildJsonObject { put("requestId", JsonPrimitive(current.requestId)) }.toString())
+        }
+      }
+    }
+  }
+
+  /** Starts WhatsApp linking: shows the gateway's QR, then waits until the phone scans it. */
+  fun startWhatsAppPairing(force: Boolean = false) {
+    if (mode == NodeRuntimeMode.ScreenshotFixture) return
+    orionPairingJob?.cancel()
+    mutableOrionPairing.value = OrionPairingState.Working("Asking WhatsApp for a link code…")
+    orionPairingJob =
+      scope.launch {
+        try {
+          val gatewayScope = captureGatewayDataScope() ?: error("Not connected to a gateway.")
+          val start =
+            json
+              .parseToJsonElement(
+                requestGatewayData(
+                  gatewayScope,
+                  "web.login.start",
+                  buildJsonObject {
+                    put("channel", JsonPrimitive("whatsapp"))
+                    put("force", JsonPrimitive(force))
+                    put("timeoutMs", JsonPrimitive(30_000))
+                  }.toString(),
+                  timeoutMs = 45_000,
+                ),
+              ).asObjectOrNull()
+          if (start.boolean("connected")) {
+            mutableOrionPairing.value = OrionPairingState.Done("WhatsApp is already linked.")
+            refreshOrionFromGateway()
+            return@launch
+          }
+          var qr = start?.get("qrDataUrl").asStringOrNull()
+          val sessionKey = start?.get("sessionKey").asStringOrNull()
+          var message = start?.get("message").asStringOrNull()
+          while (true) {
+            val png = qr?.let(::decodePngDataUrl) ?: error(message ?: "WhatsApp did not return a QR code.")
+            mutableOrionPairing.value = OrionPairingState.WhatsAppQr(png, message)
+            val wait =
+              json
+                .parseToJsonElement(
+                  requestGatewayData(
+                    gatewayScope,
+                    "web.login.wait",
+                    buildJsonObject {
+                      put("channel", JsonPrimitive("whatsapp"))
+                      put("timeoutMs", JsonPrimitive(120_000))
+                      if (sessionKey != null) put("sessionKey", JsonPrimitive(sessionKey))
+                      if (qr != null) put("currentQrDataUrl", JsonPrimitive(qr))
+                    }.toString(),
+                    timeoutMs = 135_000,
+                  ),
+                ).asObjectOrNull()
+            message = wait?.get("message").asStringOrNull() ?: message
+            if (wait.boolean("connected")) {
+              mutableOrionPairing.value = OrionPairingState.Done("WhatsApp linked.")
+              refreshOrionFromGateway()
+              return@launch
+            }
+            wait?.get("qrDataUrl").asStringOrNull()?.let { qr = it }
+          }
+        } catch (err: CancellationException) {
+          throw err
+        } catch (err: Throwable) {
+          mutableOrionPairing.value = OrionPairingState.Failed(err.message?.takeIf { it.isNotBlank() } ?: "WhatsApp linking failed.")
+        }
+      }
+  }
+
+  /** Starts GitHub's device flow for the signed-in person's own account. */
+  fun startGitHubPairing() {
+    if (mode == NodeRuntimeMode.ScreenshotFixture) return
+    orionPairingJob?.cancel()
+    mutableOrionPairing.value = OrionPairingState.Working("Asking GitHub for a code…")
+    orionPairingJob =
+      scope.launch {
+        try {
+          val gatewayScope = captureGatewayDataScope() ?: error("Not connected to a gateway.")
+          val start = json.parseToJsonElement(requestGatewayData(gatewayScope, "users.github.authorize.start", "{}")).asObjectOrNull()
+          val requestId = start?.get("requestId").asStringOrNull() ?: error("GitHub did not start the sign-in.")
+          val code = start?.get("userCode").asStringOrNull() ?: error("GitHub did not return a code.")
+          val uri = start?.get("verificationUri").asStringOrNull() ?: "https://github.com/login/device"
+          var pollMs = start.long("pollAfterMs") ?: 5_000L
+          mutableOrionPairing.value = OrionPairingState.GitHubCode(requestId, code, uri, pollMs)
+          while (true) {
+            delay(pollMs.coerceIn(1_000L, 60_000L))
+            val poll =
+              json
+                .parseToJsonElement(
+                  requestGatewayData(gatewayScope, "users.github.authorize.poll", buildJsonObject { put("requestId", JsonPrimitive(requestId)) }.toString()),
+                ).asObjectOrNull()
+            when (val status = poll?.get("status").asStringOrNull()) {
+              "success" -> {
+                mutableOrionPairing.value = OrionPairingState.Done("GitHub connected.")
+                refreshOrionFromGateway()
+                return@launch
+              }
+              "pending" -> Unit
+              "slow_down" -> pollMs += 5_000
+              "access_denied" -> error("GitHub access was denied.")
+              "expired" -> error("The code expired. Start again.")
+              else -> error("GitHub sign-in ended: ${status ?: "unknown"}.")
+            }
+          }
+        } catch (err: CancellationException) {
+          throw err
+        } catch (err: Throwable) {
+          mutableOrionPairing.value = OrionPairingState.Failed(err.message?.takeIf { it.isNotBlank() } ?: "GitHub sign-in failed.")
+        }
+      }
+  }
 
   fun refreshDreaming() = launchGatewayRefresh { refreshDreamingFromGateway() }
 
@@ -8970,6 +9137,15 @@ class NodeRuntime private constructor(
       },
     )
   }
+
+  private suspend fun refreshOrionFromGateway() =
+    refreshGatewaySummary(
+      summary = orionSummary,
+      failureText = nativeText("Could not load Orion admin."),
+    ) { gatewayScope ->
+      val response = requestGatewayData(gatewayScope, "orion.admin.overview", "{}")
+      parseOrionOverview(json.parseToJsonElement(response).asObjectOrNull()) ?: error("Malformed Orion response.")
+    }
 
   private suspend fun refreshChannelsFromGateway() =
     refreshGatewaySummary(

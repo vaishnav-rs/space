@@ -98,7 +98,7 @@ fun resolveGatewayThemeFamily(config: JsonObject?): AppearanceThemeFamily {
       .asObjectOrNull()
       ?.get("theme")
       .asStringOrNull()
-  return AppearanceThemeFamily.entries.firstOrNull { it.rawValue == raw } ?: AppearanceThemeFamily.Claw
+  return AppearanceThemeFamily.entries.firstOrNull { it.rawValue == raw } ?: AppearanceThemeFamily.Orion
 }
 
 fun resolveGatewayThemeMode(config: JsonObject?): AppearanceThemeMode {

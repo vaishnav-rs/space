@@ -8,6 +8,7 @@ enum class AppearanceThemeFamily(
   val previewSecondaryArgb: Long,
   val previewCanvasArgb: Long,
 ) {
+  Orion("orion", "Orion", 0xFF8FA1FF, 0xFF5EEAD4, 0xFF0B1020),
   Claw("claw", "Claw", 0xFFFF5C5C, 0xFF14B8A6, 0xFF0E1015),
   Knot("knot", "Knot", 0xFFE5243B, 0xFFB8BDC4, 0xFF080808),
   Dash("dash", "Dash", 0xFFCF8B4D, 0xFFDCB878, 0xFF1A1210),
@@ -22,7 +23,7 @@ enum class AppearanceThemeFamily(
   ;
 
   companion object {
-    fun fromRawValue(value: String?): AppearanceThemeFamily = entries.firstOrNull { it.rawValue == value?.trim()?.lowercase() } ?: Claw
+    fun fromRawValue(value: String?): AppearanceThemeFamily = entries.firstOrNull { it.rawValue == value?.trim()?.lowercase() } ?: Orion
   }
 }
 

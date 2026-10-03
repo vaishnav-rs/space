@@ -194,6 +194,14 @@ private fun webThemePalette(
       null
     }
 
+    AppearanceThemeFamily.Orion -> {
+      if (dark) {
+        WebThemePalette(0xFF0B1020, 0xFF11172E, 0xFF161E3A, 0xFF1C2646, 0xFF8FA1FF, 0xFF1E2748, 0xFF2B3763, 0xFFC6CDE6, 0xFF8089AD, 0xFF8FA1FF, 0xFF0A0F24, 0xFF5EEAD4)
+      } else {
+        WebThemePalette(0xFFF6F7FD, 0xFFF0F2FB, 0xFFFFFFFF, 0xFFE7EAF8, 0xFF5B6CFF, 0xFFE1E5F5, 0xFFC9D0EA, 0xFF1B2140, 0xFF5A6490, 0xFF5B6CFF, 0xFFFFFFFF, 0xFF0F9F8F)
+      }
+    }
+
     AppearanceThemeFamily.Knot -> {
       if (dark) {
         WebThemePalette(0xFF080808, 0xFF111113, 0xFF141416, 0xFF1A1A1E, 0xFFE5243B, 0xFF202026, 0xFF303038, 0xFFC6C6CB, 0xFF8A8A94, 0xFFD92A3F, 0xFFFAFAFA, 0xFFB8BDC4)
@@ -308,7 +316,7 @@ private fun familyColors(
 
 internal fun clawColorsForTheme(
   dark: Boolean,
-  family: AppearanceThemeFamily = AppearanceThemeFamily.Claw,
+  family: AppearanceThemeFamily = AppearanceThemeFamily.Orion,
   accentArgb: Long?,
 ): ClawColors {
   val base = familyColors(dark = dark, family = family)
@@ -340,7 +348,7 @@ internal object ClawTheme {
 @Composable
 internal fun ClawDesignTheme(
   dark: Boolean = true,
-  family: AppearanceThemeFamily = AppearanceThemeFamily.Claw,
+  family: AppearanceThemeFamily = AppearanceThemeFamily.Orion,
   accentArgb: Long? = null,
   content: @Composable () -> Unit,
 ) {

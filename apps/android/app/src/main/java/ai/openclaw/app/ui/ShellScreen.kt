@@ -1348,6 +1348,7 @@ private fun SettingsShellScreen(
         if (isConnected) channelsState.summaryText(::channelsSummaryText) else nativeText("Connect to manage channels"),
         needsAttention = isConnected && (channelsState.errorText != null || channelsState.summary?.channels?.any { it.error != null } == true),
       ),
+      SettingsRow(SettingsRoute.Orion, nativeText("People, roles and connections")),
       SettingsRow(
         SettingsRoute.ProvidersModels,
         when {
