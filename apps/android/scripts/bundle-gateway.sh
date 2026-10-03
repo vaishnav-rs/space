@@ -15,7 +15,7 @@ tar -xzf "$STAGE"/openclaw-*.tgz -C "$STAGE/pkg" --strip-components=1
 cd "$STAGE/pkg"
 # Production dependencies only. Native add-ons prebuilt for desktop Linux are useless on Android, so
 # no install scripts and no optional packages (sqlite-vec, platform PTY binaries).
-npm install --omit=dev --omit=optional --ignore-scripts --no-audit --no-fund
+npm install --omit=dev --omit=optional --ignore-scripts --legacy-peer-deps --no-audit --no-fund
 mkdir -p personal
 cp -r "$ROOT/personal/workspace" personal/workspace
 # Smoke test the staged bundle with the build machine's Node before it is shipped.
