@@ -1,9 +1,12 @@
 name: Orion Release
 
 # Builds the native Android app and the gateway bundle, then publishes them as a GitHub Release.
-# Trigger: push a tag like `orion-v1.0.0`, or run manually with a tag name.
+# Triggers: every push to claude/new-work publishes a pre-release named orion-build-<run number>;
+# a tag like `orion-v1.0.0` (or a release created in the GitHub web UI) publishes a normal release;
+# the Actions tab can also run it by hand with a tag name once the workflow is on the default branch.
 on:
   push:
+    branches: [claude/new-work]
     tags: ["orion-v*"]
   workflow_dispatch:
     inputs:
@@ -16,11 +19,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: orion-release-${{ github.ref }}-${{ inputs.tag || github.ref_name }}
+  group: orion-release-${{ github.ref }}
   cancel-in-progress: false
 
 env:
-  TAG: ${{ inputs.tag || github.ref_name }}
+  TAG: ${{ inputs.tag || (github.ref_type == 'tag' && github.ref_name) || format('orion-build-{0}', github.run_number) }}
+  PRERELEASE: ${{ github.ref_type == 'branch' && 'true' || 'false' }}
 
 jobs:
   android:
@@ -160,6 +164,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          PRERELEASE: ${{ env.PRERELEASE }}
           COMMIT: ${{ github.sha }}
         run: |
           set -euo pipefail
@@ -173,5 +178,7 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/* --clobber
           else
-            gh release create "$TAG" dist/* --title "Orion ${TAG}" --notes "$NOTES" --target "$COMMIT"
+            FLAGS=""
+            if [ "$PRERELEASE" = "true" ]; then FLAGS="--prerelease"; fi
+            gh release create "$TAG" dist/* $FLAGS --title "Orion ${TAG}" --notes "$NOTES" --target "$COMMIT"
           fi
