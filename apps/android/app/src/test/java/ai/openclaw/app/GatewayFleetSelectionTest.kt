@@ -3,10 +3,6 @@ package ai.openclaw.app
 import ai.openclaw.app.gateway.GatewayEndpoint
 import ai.openclaw.app.gateway.GatewayRegistryEntry
 import ai.openclaw.app.gateway.GatewayRegistryEntryKind
-import ai.openclaw.app.ui.controlUiOriginRule
-import ai.openclaw.app.ui.desktopUrl
-import ai.openclaw.app.ui.sessionDashboardUrl
-import ai.openclaw.app.ui.terminalUrl
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -140,24 +136,10 @@ class GatewayControlPageContextPathTest {
   }
 
   @Test
-  fun everyControlPagePreservesEncodedGatewayContextPathAndOrigin() {
-    val baseUrl =
-      gatewayControlPageBaseUrl(
-        GatewayEndpoint.manual("gateway.example", 443, true, "/tenant%2Fgateway%20west"),
-      )
-
+  fun controlPageBasePreservesEncodedGatewayContextPath() {
     assertEquals(
-      "https://gateway.example:443/tenant%2Fgateway%20west/focus/terminal",
-      terminalUrl(baseUrl),
+      "https://gateway.example:443/tenant%2Fgateway%20west",
+      gatewayControlPageBaseUrl(GatewayEndpoint.manual("gateway.example", 443, true, "/tenant%2Fgateway%20west")),
     )
-    assertEquals(
-      "https://gateway.example:443/tenant%2Fgateway%20west/focus/desktop",
-      desktopUrl(baseUrl),
-    )
-    assertEquals(
-      "https://gateway.example:443/tenant%2Fgateway%20west/dashboard/main/~key/qa",
-      sessionDashboardUrl(baseUrl, "agent:main:qa"),
-    )
-    assertEquals("https://gateway.example:443", controlUiOriginRule(baseUrl))
   }
 }

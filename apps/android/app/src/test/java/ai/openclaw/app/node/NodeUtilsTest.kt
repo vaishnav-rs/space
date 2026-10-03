@@ -98,9 +98,9 @@ class NodeUtilsTest {
 
     assertEquals(AppearanceThemeFamily.Dash, resolveGatewayThemeFamily(configured))
     assertEquals(AppearanceThemeMode.Light, resolveGatewayThemeMode(configured))
-    assertEquals(AppearanceThemeFamily.Claw, resolveGatewayThemeFamily(invalid))
+    assertEquals(AppearanceThemeFamily.Orion, resolveGatewayThemeFamily(invalid))
     assertEquals(AppearanceThemeMode.System, resolveGatewayThemeMode(invalid))
-    assertEquals(AppearanceThemeFamily.Claw, resolveGatewayThemeFamily(null))
+    assertEquals(AppearanceThemeFamily.Orion, resolveGatewayThemeFamily(null))
     assertEquals(AppearanceThemeMode.System, resolveGatewayThemeMode(null))
   }
 

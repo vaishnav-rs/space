@@ -361,7 +361,6 @@ android {
     getByName("main") {
       assets.directories.add("../../shared/OpenClawKit/Sources/OpenClawKit/Resources")
       assets.directories.add(rootProject.file("../../ui/public/provider-icons").path)
-      assets.directories.add("../../shared/mermaid/assets")
       assets.directories.add(thirdPartyLicensesDir.path)
     }
   }
@@ -553,7 +552,6 @@ dependencies {
   implementation(libs.androidx.appcompat)
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.activity.compose)
-  implementation(libs.androidx.webkit)
   implementation(libs.androidx.window)
 
   implementation(libs.androidx.compose.ui)
@@ -689,31 +687,8 @@ val validateThirdPartyLicenseAssets =
     }
   }
 
-val generateMermaidAssets =
-  tasks.register<Exec>("generateMermaidAssets") {
-    val repositoryRoot = rootProject.projectDir.resolve("../..").canonicalFile
-    workingDir(repositoryRoot)
-    commandLine("pnpm", "--dir", "packages/mermaid-renderer", "build")
-    inputs
-      .files(
-        fileTree(repositoryRoot.resolve("packages/mermaid-renderer")) {
-          exclude("node_modules/**", "dist/**")
-        },
-        fileTree(repositoryRoot.resolve("packages/normalization-core")) {
-          include("src/**", "package.json")
-        },
-        repositoryRoot.resolve("tsconfig.json"),
-      ).withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.file(repositoryRoot.resolve("pnpm-lock.yaml"))
-    outputs.dir(repositoryRoot.resolve("apps/shared/mermaid/assets/mermaid"))
-  }
-
 tasks.matching { task -> task.name == "preBuild" }.configureEach {
-  dependsOn(validateThirdPartyLicenseAssets, generateMermaidAssets)
-}
-
-tasks.matching { task -> task.name.startsWith("merge") && task.name.endsWith("Assets") }.configureEach {
-  dependsOn(generateMermaidAssets)
+  dependsOn(validateThirdPartyLicenseAssets)
 }
 
 androidComponents {

@@ -339,7 +339,7 @@ fun ShellScreen(
             }
 
             Tab.Dashboard -> {
-              SessionDashboardScreen(
+              NativeBoardScreen(
                 viewModel = viewModel,
                 sessionKey = nav.dashboardSessionKey,
                 onBack = nav::back,

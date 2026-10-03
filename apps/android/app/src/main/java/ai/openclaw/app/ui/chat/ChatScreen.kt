@@ -1071,6 +1071,7 @@ internal fun ChatScreen(
               connected = gatewayConnectionDisplay.isConnected,
               canControl = operatorScopesAllowAdmin(operatorScopes),
               availableHeight = availableHeight,
+              session = viewModel.nativeBrowser,
               onClose = { viewModel.dismissChatBrowser(composerOwner, presentation.identity) },
             )
           }

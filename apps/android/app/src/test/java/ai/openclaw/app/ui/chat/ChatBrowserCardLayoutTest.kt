@@ -1,5 +1,6 @@
 package ai.openclaw.app.ui.chat
 
+import ai.openclaw.app.NativeBrowserSession
 import ai.openclaw.app.NodeRuntime
 import ai.openclaw.app.chat.ChatBrowserTab
 import ai.openclaw.app.ui.OpenClawTheme
@@ -17,6 +18,9 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -32,6 +36,7 @@ class ChatBrowserCardLayoutTest {
 
   @Test
   fun collapseReturnsTranscriptSpaceAndCloseWorksWithoutBrowserControl() {
+    val session = NativeBrowserSession(CoroutineScope(Dispatchers.Unconfined), { _, _ -> error("offline") }, { null }, Json)
     val height = mutableStateOf(600.dp)
     val connected = mutableStateOf(true)
     val canControl = mutableStateOf(true)
@@ -49,6 +54,7 @@ class ChatBrowserCardLayoutTest {
                 connected = connected.value,
                 canControl = canControl.value,
                 availableHeight = availableHeight,
+                session = session,
                 onClose = { visible.value = false },
               )
             }

@@ -69,10 +69,8 @@ class ChatMermaidBlockTest {
           ?.toString(),
       )
     }
-    composeRule.onNodeWithContentDescription("Diagram options").performClick()
-    composeRule.onNodeWithText("View source").performClick()
+    composeRule.onNodeWithContentDescription("View source").performClick()
     composeRule.onNodeWithText(source.trimEnd()).assertIsDisplayed()
-    composeRule.onNodeWithContentDescription("Diagram options").performClick()
-    composeRule.onNodeWithText("View diagram").assertIsDisplayed()
+    composeRule.onNodeWithContentDescription("View diagram").assertIsDisplayed()
   }
 }

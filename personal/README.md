@@ -27,5 +27,5 @@ The agent keeps a `today` dashboard tab (split view beside chat) via the built-i
 `conversations_send` and `conversations_turn` are guarded (owner-requested turns only). `sessions_send` talks to your own agent sessions and is left open.
 
 ## Automatic setup
-`./scripts/orion-setup.sh --owner you --email you@x.com --whatsapp +15550001111 [--hewar-root ~/code/hewar --hewar-remote git@github.com:org/hewar.git --hewar-repo org/hewar --github-user you --ssh-host hewar-prod]`
+`./scripts/orion-setup.sh --owner vaishnav --email Vaishnav.sreekiran@gmail.com --whatsapp +971541706024 [--hewar-root ~/code/hewar --hewar-remote git@github.com:org/hewar.git --hewar-repo org/hewar --github-user you --ssh-host hewar-prod]`
 generates the vault key, webhook secret, and gateway token (kept on re-run), creates state/workspaces under `~/.orion`, bootstraps the owner, writes config and `start.sh`, starts the gateway, creates the proactive jobs, and prints the app pairing QR. Add Google, Resend, and GitHub credentials to `~/.orion/orion.env` or connect them from the app; the script lists what is still missing. On Windows run it in WSL, or run `scripts/orion-setup.mts` with node and use the generated `start.cmd`.

@@ -1692,6 +1692,14 @@ class MainViewModel private constructor(
     ensureRuntime().dismissExecApprovalsNotice(expected)
   }
 
+  suspend fun loadBoard(sessionKey: String): NativeBoard = ensureRuntime().loadBoard(sessionKey)
+
+  val nativeTerminal: NativeTerminalSession get() = ensureRuntime().nativeTerminal
+
+  val nativeDesktop: NativeDesktopSession get() = ensureRuntime().nativeDesktop
+
+  val nativeBrowser: NativeBrowserSession get() = ensureRuntime().nativeBrowser
+
   fun refreshOrion() {
     ensureRuntime().refreshOrion()
   }

@@ -1,0 +1,165 @@
+name: Orion Release
+
+# Builds the native Android app and the gateway bundle, then publishes them as a GitHub Release.
+# Trigger: push a tag like `orion-v1.0.0`, or run manually with a tag name.
+on:
+  push:
+    tags: ["orion-v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to create or update (for example orion-v1.0.0)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: orion-release-${{ github.ref }}-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare signing key
+        # Set ORION_ANDROID_KEYSTORE_BASE64, ORION_ANDROID_KEYSTORE_PASSWORD, ORION_ANDROID_KEY_ALIAS and
+        # ORION_ANDROID_KEY_PASSWORD as repository secrets so every release is signed by the same key and
+        # installs as an update. Without them a one-off key is generated and updates need an uninstall first.
+        env:
+          KEYSTORE_B64: ${{ secrets.ORION_ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ORION_ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ORION_ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ORION_ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/signing"
+          KS="$RUNNER_TEMP/signing/orion.jks"
+          if [ -n "${KEYSTORE_B64:-}" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$KS"
+            echo "SIGNED_WITH=repository key" >> "$GITHUB_ENV"
+          else
+            STORE_PASSWORD="$(openssl rand -hex 16)"; KEY_PASSWORD="$STORE_PASSWORD"; KEY_ALIAS=orion
+            keytool -genkeypair -keystore "$KS" -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" \
+              -alias "$KEY_ALIAS" -keyalg RSA -keysize 4096 -validity 36500 -dname "CN=Orion"
+            echo "SIGNED_WITH=one-off key (add the ORION_ANDROID_* secrets for stable updates)" >> "$GITHUB_ENV"
+          fi
+          mkdir -p "$HOME/.gradle"
+          {
+            echo "OPENCLAW_ANDROID_STORE_FILE=$KS"
+            echo "OPENCLAW_ANDROID_STORE_PASSWORD=$STORE_PASSWORD"
+            echo "OPENCLAW_ANDROID_KEY_ALIAS=$KEY_ALIAS"
+            echo "OPENCLAW_ANDROID_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$HOME/.gradle/gradle.properties"
+
+      - name: Unit tests
+        working-directory: apps/android
+        run: ./gradlew --no-daemon :app:testThirdPartyDebugUnitTest
+
+      - name: Build release APK
+        working-directory: apps/android
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon :app:assembleThirdPartyRelease \
+            -PopenclawBuildCommit="$GITHUB_SHA" \
+            -PopenclawBuildTimestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+      - name: Collect APK
+        run: |
+          set -euo pipefail
+          APK="$(ls apps/android/app/build/outputs/apk/thirdParty/release/*.apk | head -n1)"
+          mkdir -p dist
+          cp "$APK" "dist/orion-${TAG}.apk"
+          (cd dist && sha256sum "orion-${TAG}.apk" > "orion-${TAG}.apk.sha256")
+          "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n1)/apksigner" verify --print-certs "dist/orion-${TAG}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: orion-android
+          path: dist/*
+
+  gateway:
+    name: Gateway bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck and Orion tests
+        run: |
+          pnpm tsgo:core
+          pnpm vitest run src/orion src/personal
+
+      - name: Build
+        run: pnpm build
+
+      - name: Pack
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          pnpm pack --pack-destination dist
+          cp scripts/orion-setup.sh scripts/orion-setup.mts dist/
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: orion-gateway
+          path: dist/*
+
+  publish:
+    name: Publish release
+    needs: [android, gateway]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          NOTES="Orion ${TAG}
+
+          - orion-${TAG}.apk: native Android app (install it, then pair with your gateway).
+          - openclaw-*.tgz: the gateway. Install with npm or pnpm, then run orion-setup.sh.
+          - orion-setup.sh / orion-setup.mts: one-command setup (secrets, owner, config, gateway start, pairing QR).
+
+          Commit ${COMMIT}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* --title "Orion ${TAG}" --notes "$NOTES" --target "$COMMIT"
+          fi

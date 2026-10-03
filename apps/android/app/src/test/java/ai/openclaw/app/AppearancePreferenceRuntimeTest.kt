@@ -160,7 +160,7 @@ class AppearancePreferenceRuntimeTest {
 
         connect(profileId = "profile-b")
         assertTrue(writes.isEmpty())
-        assertEquals(AppearanceThemeFamily.Claw, prefs.appearanceThemeFamily.value)
+        assertEquals(AppearanceThemeFamily.Orion, prefs.appearanceThemeFamily.value)
         assertEquals(mapOf("ui.theme" to "dash"), prefs.pendingAppearancePreferenceEntries(profileA))
 
         connect(profileId = "profile-a")
@@ -767,7 +767,7 @@ class AppearancePreferenceRuntimeTest {
           releaseWrite.complete(Unit)
 
           assertTrue(withTimeout(2_000) { write.await() })
-          assertEquals(AppearanceThemeFamily.Claw, prefs.appearanceThemeFamily.value)
+          assertEquals(AppearanceThemeFamily.Orion, prefs.appearanceThemeFamily.value)
           assertEquals(mapOf("ui.theme" to "dash"), prefs.pendingAppearancePreferenceEntries(profileA))
         } finally {
           releaseWrite.complete(Unit)

@@ -20,7 +20,7 @@ class ClawColorsTest {
       assertEquals(Color(family.previewAccentArgb), colors.accent)
       assertEquals(family, AppearanceThemeFamily.fromRawValue(family.rawValue.uppercase()))
     }
-    assertEquals(AppearanceThemeFamily.Claw, AppearanceThemeFamily.fromRawValue("unknown"))
+    assertEquals(AppearanceThemeFamily.Orion, AppearanceThemeFamily.fromRawValue("unknown"))
   }
 
   @Test
@@ -77,12 +77,12 @@ class ClawColorsTest {
       )
 
     for ((dark, expected) in expectedAccents) {
-      val colors = clawColorsForTheme(dark = dark, accentArgb = null)
+      val colors = clawColorsForTheme(dark = dark, accentArgb = null, family = AppearanceThemeFamily.Claw)
 
       assertEquals(expected.first, colors.accent)
       assertEquals(expected.second, colors.accentSoft)
       assertEquals(expected.third, colors.accentBorder)
-      assertSame(colors, clawColorsForTheme(dark = dark, accentArgb = null))
+      assertSame(colors, clawColorsForTheme(dark = dark, accentArgb = null, family = AppearanceThemeFamily.Claw))
     }
   }
 
@@ -99,8 +99,8 @@ class ClawColorsTest {
     for ((accentArgb, expectedInk) in cases) {
       val accent = Color(accentArgb)
       for (dark in listOf(true, false)) {
-        val base = clawColorsForTheme(dark = dark, accentArgb = null)
-        val colors = clawColorsForTheme(dark = dark, accentArgb = accentArgb)
+        val base = clawColorsForTheme(dark = dark, accentArgb = null, family = AppearanceThemeFamily.Claw)
+        val colors = clawColorsForTheme(dark = dark, accentArgb = accentArgb, family = AppearanceThemeFamily.Claw)
 
         assertEquals(accent, colors.accent)
         assertEquals(accent, colors.primary)

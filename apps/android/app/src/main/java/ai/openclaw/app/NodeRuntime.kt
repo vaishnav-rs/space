@@ -135,7 +135,6 @@ import android.os.SystemClock
 import android.util.Base64
 import android.util.Log
 import androidx.core.content.ContextCompat
-import androidx.webkit.WebViewFeature
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -1240,7 +1239,7 @@ class NodeRuntime private constructor(
       prefs = prefs,
       advertisedCapabilities = invokeDispatcher::buildCapabilities,
       advertisedCommands = invokeDispatcher::buildInvokeCommands,
-      inlineWidgetsAvailable = { WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE) },
+      inlineWidgetsAvailable = { true },
       permissionSnapshot = permissionSnapshot,
       manualTls = { endpoint ->
         prefs.gatewayRegistry.entries.value
@@ -1503,6 +1502,25 @@ class NodeRuntime private constructor(
   private val mutableOrionPairing = MutableStateFlow<OrionPairingState>(OrionPairingState.Idle)
   val orionPairing: StateFlow<OrionPairingState> = mutableOrionPairing.asStateFlow()
   private var orionPairingJob: Job? = null
+  /** Single-shot operator request for native surfaces (board, terminal) that own their own state. */
+  suspend fun gatewayCall(
+    method: String,
+    paramsJson: String?,
+    timeoutMs: Long = 15_000,
+  ): String {
+    val gatewayScope = captureGatewayDataScope() ?: error("Not connected to a gateway.")
+    return requestGatewayData(gatewayScope, method, paramsJson, timeoutMs)
+  }
+
+  suspend fun loadBoard(sessionKey: String): NativeBoard {
+    val params = buildJsonObject { put("sessionKey", JsonPrimitive(sessionKey)) }.toString()
+    val root = json.parseToJsonElement(gatewayCall("board.get", params)).asObjectOrNull()
+    return parseBoard(root) ?: error("Malformed dashboard response.")
+  }
+
+  val nativeBrowser = NativeBrowserSession(scope, { method, params -> gatewayCall(method, params) }, { gatewayControlPage.value }, json)
+  val nativeDesktop = NativeDesktopSession(scope, { method, params -> gatewayCall(method, params) }, { gatewayControlPage.value }, json)
+  val nativeTerminal = NativeTerminalSession(scope, { method, params -> gatewayCall(method, params) }, json)
   private val dreamingSummary = GatewaySummaryOwner<GatewayDreamingSummary>()
   val dreamingState: StateFlow<GatewaySummaryState<GatewayDreamingSummary>> = dreamingSummary.state
   private val healthLogsSummary = GatewaySummaryOwner<GatewayHealthLogsSummary>()
@@ -1994,6 +2012,9 @@ class NodeRuntime private constructor(
     mutableExecApprovalInbox.value = GatewayExecApprovalInboxState()
     channelsSummary.reset()
     orionSummary.reset()
+    nativeTerminal.close()
+    nativeDesktop.disconnect()
+    nativeBrowser.stop()
     orionPairingJob?.cancel()
     mutableOrionPairing.value = OrionPairingState.Idle
     dreamingSummary.reset()
@@ -6004,6 +6025,7 @@ class NodeRuntime private constructor(
     if (wearRealtimeTalkControllerLazy.isInitialized()) {
       wearRealtimeTalkController.handleGatewayEvent(event, payloadJson)
     }
+    nativeTerminal.onGatewayEvent(event, payloadJson)
     chat.handleGatewayEvent(event, payloadJson)
     if (event == "chat" && !payloadJson.isNullOrBlank()) {
       runCatching { json.parseToJsonElement(payloadJson) }
