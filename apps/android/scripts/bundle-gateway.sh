@@ -8,7 +8,7 @@ STAGE="$ROOT/apps/android/build/gateway-stage"
 rm -rf "$STAGE"
 mkdir -p "$STAGE/pkg" "$OUT"
 cd "$ROOT"
-pnpm install --frozen-lockfile
+pnpm install --no-frozen-lockfile
 pnpm pack --pack-destination "$STAGE"
 tar -xzf "$STAGE"/openclaw-*.tgz -C "$STAGE/pkg" --strip-components=1
 cd "$STAGE/pkg"
