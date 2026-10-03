@@ -9,7 +9,8 @@ rm -rf "$STAGE"
 mkdir -p "$STAGE/pkg" "$OUT"
 cd "$ROOT"
 pnpm install --no-frozen-lockfile
-pnpm pack --pack-destination "$STAGE"
+# The repository's own self-contained package command (builds, bundles @openclaw/ai, packs).
+node scripts/package-openclaw-for-docker.mjs --allow-unreleased-changelog --output-dir "$STAGE"
 tar -xzf "$STAGE"/openclaw-*.tgz -C "$STAGE/pkg" --strip-components=1
 cd "$STAGE/pkg"
 # Production dependencies only. Native add-ons prebuilt for desktop Linux are useless on Android, so

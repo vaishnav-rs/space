@@ -133,14 +133,11 @@ jobs:
           pnpm tsgo:core
           pnpm vitest run src/orion src/personal
 
-      - name: Build
-        run: pnpm build
-
-      - name: Pack
+      - name: Pack (builds, then creates the self-contained package)
         run: |
           set -euo pipefail
           mkdir -p dist
-          pnpm pack --pack-destination dist
+          node scripts/package-openclaw-for-docker.mjs --allow-unreleased-changelog --output-dir dist
           cp scripts/orion-setup.sh scripts/orion-setup.mts dist/
           ls -la dist
 
