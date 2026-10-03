@@ -19,7 +19,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: orion-release-${{ github.ref }}
+  group: orion-release-${{ github.sha }}
   cancel-in-progress: false
 
 env:
