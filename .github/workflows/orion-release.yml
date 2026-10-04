@@ -127,7 +127,7 @@ jobs:
           "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n1)/apksigner" verify --print-certs "apk-out/$NAME"
           # Fail the build if the on-device runtime did not make it into the APK.
           unzip -l "apk-out/$NAME" | grep -E "orion-runtime|lib/arm64-v8a/lib(node|git|ssh)" || true
-          for need in assets/orion-runtime/libs.tar.gz assets/orion-runtime/gateway.tar.gz assets/orion-runtime/runtime.json lib/arm64-v8a/libnode.so; do
+          for need in assets/orion-runtime/libs.bin assets/orion-runtime/gateway.bin assets/orion-runtime/runtime.json lib/arm64-v8a/libnode.so; do
             unzip -l "apk-out/$NAME" | grep -q "$need" || { echo "MISSING from APK: $need"; exit 1; }
           done
           ls -lh apk-out

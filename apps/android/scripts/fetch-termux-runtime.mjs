@@ -113,11 +113,11 @@ for (const candidate of ["etc/tls/cert.pem", "etc/ssl/cert.pem"]) {
   }
 }
 mkdirSync(assetDir, { recursive: true });
-const tarPath = join(assetDir, "libs.tar.gz");
+const tarPath = join(assetDir, "libs.bin");
 execFileSync("tar", ["-czf", tarPath, "-C", bundle, "."]);
 const sha = createHash("sha256").update(readFileSync(tarPath)).digest("hex");
 writeFileSync(
   join(assetDir, "runtime.json"),
   `${JSON.stringify({ source: "termux", libsSha256: sha, packages: Object.fromEntries([...closure].map(([n, p]) => [n, p.Version])), executables: Object.keys(EXECUTABLES) }, null, 2)}\n`,
 );
-console.log(`runtime ready: ${closure.size} packages, libs.tar.gz ${(statSync(tarPath).size / 1e6).toFixed(1)} MB`);
+console.log(`runtime ready: ${closure.size} packages, libs.bin ${(statSync(tarPath).size / 1e6).toFixed(1)} MB`);

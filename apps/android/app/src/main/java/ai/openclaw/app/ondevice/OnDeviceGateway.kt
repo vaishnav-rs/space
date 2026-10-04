@@ -164,7 +164,7 @@ class OnDeviceGateway(
       if (File(layout.runtimeDir, ".version").takeIf { it.exists() }?.readText() != runtimeVersion) {
         mutableState.value = OnDeviceState.Installing("Unpacking runtime libraries")
         layout.runtimeDir.deleteRecursively()
-        openBundled("libs.tar.gz").use { TarGz.extract(it, layout.runtimeDir) }
+        openBundled("libs.bin").use { TarGz.extract(it, layout.runtimeDir) }
         File(layout.runtimeDir, ".version").writeText(runtimeVersion)
       }
       val gatewayVersion = runCatching { openBundled("gateway.version").bufferedReader().use { it.readText().trim() } }.getOrElse { error("Gateway bundle missing from this build: ${it.message}") }
@@ -172,7 +172,7 @@ class OnDeviceGateway(
         mutableState.value = OnDeviceState.Installing("Unpacking the gateway (first run takes a minute)")
         layout.gatewayDir.deleteRecursively()
         var count = 0
-        openBundled("gateway.tar.gz").use {
+        openBundled("gateway.bin").use {
           TarGz.extract(it, layout.gatewayDir) {
             if (++count % 2000 == 0) mutableState.value = OnDeviceState.Installing("Unpacking the gateway ($count files)")
           }

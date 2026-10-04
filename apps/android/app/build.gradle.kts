@@ -426,8 +426,8 @@ android {
   }
 
   androidResources {
-    // The bundled gateway and runtime are already gzip archives.
-    noCompress += listOf("gz")
+    // The bundled gateway and runtime are already gzip archives; named .bin because the Android build tool unpacks .gz assets and drops the extension.
+    noCompress += listOf("bin")
     generateLocaleConfig = true
     localeFilters +=
       listOf(

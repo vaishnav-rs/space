@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Packs the Orion gateway for the on-device runtime: apps/android/app/src/main/assets/orion-runtime/gateway.tar.gz
+# Packs the Orion gateway for the on-device runtime: apps/android/app/src/main/assets/orion-runtime/gateway.bin
 # Needs Node 24 and pnpm. Run scripts/fetch-termux-runtime.mjs as well, then build the app.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
@@ -25,6 +25,6 @@ find node_modules \( -name '*.map' -o -name '*.d.ts' -o -name '*.d.mts' -o -name
 if [ -d node_modules/koffi/build/koffi ]; then
   find node_modules/koffi/build/koffi -mindepth 1 -maxdepth 1 ! -name 'android*' -exec rm -rf {} +
 fi
-tar -czf "$OUT/gateway.tar.gz" -C "$STAGE/pkg" .
-sha256sum "$OUT/gateway.tar.gz" | cut -c1-16 > "$OUT/gateway.version"
-ls -lh "$OUT/gateway.tar.gz"
+tar -czf "$OUT/gateway.bin" -C "$STAGE/pkg" .
+sha256sum "$OUT/gateway.bin" | cut -c1-16 > "$OUT/gateway.version"
+ls -lh "$OUT/gateway.bin"
