@@ -119,15 +119,16 @@ jobs:
         run: |
           set -euo pipefail
           APK="$(ls apps/android/app/build/outputs/apk/thirdParty/release/*.apk | head -n1)"
-          mkdir -p dist
-          cp "$APK" "dist/orion-${TAG}.apk"
-          (cd dist && sha256sum "orion-${TAG}.apk" > "orion-${TAG}.apk.sha256")
-          "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n1)/apksigner" verify --print-certs "dist/orion-${TAG}.apk"
-          ls -lh dist
+          # Not dist/: that is the gateway build output folder in the repository.
+          mkdir -p apk-out
+          cp "$APK" "apk-out/orion-${TAG}.apk"
+          (cd apk-out && sha256sum "orion-${TAG}.apk" > "orion-${TAG}.apk.sha256")
+          "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n1)/apksigner" verify --print-certs "apk-out/orion-${TAG}.apk"
+          ls -lh apk-out
 
       - name: Upload to the release
         # Straight to the release: large build artifacts are slow and unreliable to upload.
-        run: gh release upload "$TAG" dist/* --clobber
+        run: gh release upload "$TAG" apk-out/* --clobber
 
   android-tests:
     name: Android unit tests
