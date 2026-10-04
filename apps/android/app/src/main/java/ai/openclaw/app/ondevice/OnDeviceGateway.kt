@@ -224,6 +224,8 @@ class OnDeviceGateway(
               mutableState.value = OnDeviceState.Failed("The gateway did not start listening within ${START_TIMEOUT_MS / 1000}s. See the log.")
             }
             val code = withContext(Dispatchers.IO) { p.waitFor() }
+            // Let the reader drain what the process wrote just before exiting: that is where the error is.
+            kotlinx.coroutines.withTimeoutOrNull(4_000) { reader.join() }
             reader.cancel()
             process = null
             if (stopRequested) break

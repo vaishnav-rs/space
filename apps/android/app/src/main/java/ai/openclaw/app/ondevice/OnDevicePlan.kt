@@ -107,6 +107,8 @@ object OnDevicePlan {
     env["GIT_CONFIG_NOSYSTEM"] = "1"
     env["GIT_PAGER"] = "cat"
     env["GIT_TERMINAL_PROMPT"] = "0"
+    // Full failure details (reason and stack) in the in-app log.
+    env["OPENCLAW_DEBUG"] = "1"
     env["GIT_SSH_COMMAND"] = "${File(layout.binDir, "ssh").path} -F ${File(layout.home, ".ssh/config").path}"
     env["OPENCLAW_STATE_DIR"] = layout.openclawStateDir.path
     env["OPENCLAW_CONFIG_PATH"] = layout.configFile.path
