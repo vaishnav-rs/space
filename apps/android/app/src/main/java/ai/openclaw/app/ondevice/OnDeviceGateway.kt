@@ -205,10 +205,7 @@ class OnDeviceGateway(
             val settings = settings()
             mutableState.value = OnDeviceState.Starting
             val builder = ProcessBuilder(OnDevicePlan.command(layout, settings)).directory(layout.gatewayDir).redirectErrorStream(true)
-            builder.environment().apply {
-              clear()
-              putAll(OnDevicePlan.environment(layout, secrets(), settings))
-            }
+            builder.environment().applyOrion(OnDevicePlan.environment(layout, secrets(), settings))
             appendLog("Starting gateway on port ${settings.port} (${if (settings.lan) "network" else "this phone only"})")
             val p = builder.start()
             process = p
@@ -230,7 +227,8 @@ class OnDeviceGateway(
             reader.cancel()
             process = null
             if (stopRequested) break
-            val failed = "The gateway stopped (exit $code). Restarting…"
+            val tail = mutableLog.value.filter { it.isNotBlank() }.takeLast(8).joinToString("\n").take(900)
+            val failed = "The gateway stopped (exit $code). Restarting…\n$tail"
             appendLog(failed)
             mutableState.value = OnDeviceState.Failed(failed)
           } catch (err: CancellationException) {
@@ -290,10 +288,7 @@ class OnDeviceGateway(
         val outcome =
           runCatching {
             val b = ProcessBuilder(*cmd).redirectErrorStream(true)
-            b.environment().apply {
-              clear()
-              putAll(env)
-            }
+            b.environment().applyOrion(env)
             val p = b.start()
             val text = p.inputStream.bufferedReader().readText().trim().lineSequence().firstOrNull().orEmpty()
             if (!p.waitFor(20, TimeUnit.SECONDS)) {
@@ -321,4 +316,14 @@ class OnDeviceGateway(
     listOf(layout.stateDir, layout.openclawStateDir, layout.workspacesDir, layout.agentWorkspace, layout.secretsFile, layout.configFile, layout.logFile).forEach { it.deleteRecursively() }
     mutableLog.value = emptyList()
   }
+}
+
+/**
+ * Keeps the app's own environment (Android's ANDROID_ROOT, ANDROID_DATA and friends, which Termux-built
+ * binaries expect) and overlays Orion's. Library paths are merged so system libraries stay reachable.
+ */
+private fun MutableMap<String, String>.applyOrion(extra: Map<String, String>) {
+  val inheritedLibs = this["LD_LIBRARY_PATH"]
+  putAll(extra)
+  if (!inheritedLibs.isNullOrEmpty()) this["LD_LIBRARY_PATH"] = "${extra["LD_LIBRARY_PATH"]}:$inheritedLibs"
 }

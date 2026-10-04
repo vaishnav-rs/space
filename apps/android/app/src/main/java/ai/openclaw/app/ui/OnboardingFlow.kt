@@ -1296,7 +1296,7 @@ private fun OnDeviceGatewayButton() {
     onClick = { ai.openclaw.app.ondevice.OnDeviceGatewayService.start(context) },
     modifier = Modifier.onboardingActionButton(),
   )
-  label?.let { Text(text = it, style = ClawTheme.type.caption, color = ClawTheme.colors.textMuted, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
+  label?.let { androidx.compose.foundation.text.selection.SelectionContainer { Text(text = it, style = ClawTheme.type.captionSmall, color = ClawTheme.colors.textMuted, textAlign = TextAlign.Start, maxLines = 14, modifier = Modifier.fillMaxWidth()) } }
 }
 
 @Composable
