@@ -1,6 +1,7 @@
 name: Orion Release
 
-# Builds the native Android app and the gateway bundle, then publishes them as a GitHub Release.
+# Builds the native Android app with the on-device gateway inside it, plus the standalone gateway
+# package, and publishes them as a GitHub Release.
 # Triggers: every push to claude/new-work publishes a pre-release named orion-build-<run number>;
 # a tag like `orion-v1.0.0` (or a release created in the GitHub web UI) publishes a normal release;
 # the Actions tab can also run it by hand with a tag name once the workflow is on the default branch.
@@ -25,12 +26,35 @@ concurrency:
 env:
   TAG: ${{ inputs.tag || (github.ref_type == 'tag' && github.ref_name) || format('orion-build-{0}', github.run_number) }}
   PRERELEASE: ${{ github.ref_type == 'branch' && 'true' || 'false' }}
+  GH_TOKEN: ${{ github.token }}
+  GH_REPO: ${{ github.repository }}
 
 jobs:
+  release:
+    name: Create release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Create the release if it does not exist
+        run: |
+          set -euo pipefail
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            FLAGS=""
+            if [ "$PRERELEASE" = "true" ]; then FLAGS="--prerelease"; fi
+            gh release create "$TAG" $FLAGS --title "Orion ${TAG}" --target "${{ github.sha }}" --notes "Orion ${TAG}
+
+          - orion-${TAG}.apk: the Android app with the gateway, Node, git and ssh inside. Install it, open Settings, On this phone, tap Set up and start.
+          - openclaw-*.tgz: the gateway as a package, for running Orion on a computer or server.
+          - orion-setup.sh / orion-setup.mts: one-command setup for that computer or server.
+
+          Commit ${{ github.sha }}"
+          fi
+
   android:
     name: Android APK
+    needs: release
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with:
@@ -70,12 +94,10 @@ jobs:
           KS="$RUNNER_TEMP/signing/orion.jks"
           if [ -n "${KEYSTORE_B64:-}" ]; then
             echo "$KEYSTORE_B64" | base64 -d > "$KS"
-            echo "SIGNED_WITH=repository key" >> "$GITHUB_ENV"
           else
             STORE_PASSWORD="$(openssl rand -hex 16)"; KEY_PASSWORD="$STORE_PASSWORD"; KEY_ALIAS=orion
             keytool -genkeypair -keystore "$KS" -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" \
               -alias "$KEY_ALIAS" -keyalg RSA -keysize 4096 -validity 36500 -dname "CN=Orion"
-            echo "SIGNED_WITH=one-off key (add the ORION_ANDROID_* secrets for stable updates)" >> "$GITHUB_ENV"
           fi
           mkdir -p "$HOME/.gradle"
           {
@@ -84,10 +106,6 @@ jobs:
             echo "OPENCLAW_ANDROID_KEY_ALIAS=$KEY_ALIAS"
             echo "OPENCLAW_ANDROID_KEY_PASSWORD=$KEY_PASSWORD"
           } >> "$HOME/.gradle/gradle.properties"
-
-      - name: Unit tests
-        working-directory: apps/android
-        run: ./gradlew --no-daemon :app:testThirdPartyDebugUnitTest
 
       - name: Build release APK
         working-directory: apps/android
@@ -105,16 +123,37 @@ jobs:
           cp "$APK" "dist/orion-${TAG}.apk"
           (cd dist && sha256sum "orion-${TAG}.apk" > "orion-${TAG}.apk.sha256")
           "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n1)/apksigner" verify --print-certs "dist/orion-${TAG}.apk"
+          ls -lh dist
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload to the release
+        # Straight to the release: large build artifacts are slow and unreliable to upload.
+        run: gh release upload "$TAG" dist/* --clobber
+
+  android-tests:
+    name: Android unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
         with:
-          name: orion-android
-          path: dist/*
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests
+        working-directory: apps/android
+        run: ./gradlew --no-daemon :app:testThirdPartyDebugUnitTest
 
   gateway:
-    name: Gateway bundle
+    name: Gateway package
+    needs: release
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
@@ -142,40 +181,5 @@ jobs:
           cp scripts/orion-setup.sh scripts/orion-setup.mts release-out/
           ls -la release-out
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: orion-gateway
-          path: release-out/*
-
-  publish:
-    name: Publish release
-    needs: [android, gateway]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: dist
-          merge-multiple: true
-
-      - name: Create or update release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          PRERELEASE: ${{ env.PRERELEASE }}
-          COMMIT: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          NOTES="Orion ${TAG}
-
-          - orion-${TAG}.apk: native Android app (install it, then pair with your gateway).
-          - openclaw-*.tgz: the gateway. Install with npm or pnpm, then run orion-setup.sh.
-          - orion-setup.sh / orion-setup.mts: one-command setup (secrets, owner, config, gateway start, pairing QR).
-
-          Commit ${COMMIT}"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/* --clobber
-          else
-            FLAGS=""
-            if [ "$PRERELEASE" = "true" ]; then FLAGS="--prerelease"; fi
-            gh release create "$TAG" dist/* $FLAGS --title "Orion ${TAG}" --notes "$NOTES" --target "$COMMIT"
-          fi
+      - name: Upload to the release
+        run: gh release upload "$TAG" release-out/* --clobber
