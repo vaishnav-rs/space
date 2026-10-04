@@ -501,9 +501,9 @@ androidComponents {
         val flavorName = variant.flavorName?.takeIf { it.isNotBlank() }
         val outputFileName =
           if (flavorName == null) {
-            "openclaw-$versionName-$buildType.apk"
+            "orion-$versionName-$buildType.apk"
           } else {
-            "openclaw-$versionName-$flavorName-$buildType.apk"
+            "orion-$versionName-$flavorName-$buildType.apk"
           }
         output.outputFileName = outputFileName
       }

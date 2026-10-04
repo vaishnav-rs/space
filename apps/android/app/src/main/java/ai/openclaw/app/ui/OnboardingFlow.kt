@@ -27,7 +27,7 @@ import ai.openclaw.app.ui.design.ClawSecondaryButton
 import ai.openclaw.app.ui.design.ClawTextField
 import ai.openclaw.app.ui.design.ClawTheme
 import ai.openclaw.app.ui.design.MascotMood
-import ai.openclaw.app.ui.design.OpenClawMascot
+import ai.openclaw.app.ui.design.OrionMark
 import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -284,7 +284,7 @@ internal fun OnboardingErrorCode.nativeTextOrNull(): NativeText? {
     }
 
     OnboardingErrorCode.InvalidSetupQr -> {
-      nativeText("That QR code is not an OpenClaw setup QR. Generate a fresh code with openclaw qr, then try again.")
+      nativeText("That QR code is not an Orion setup QR. Generate a fresh code with openclaw qr, then try again.")
     }
 
     OnboardingErrorCode.ManualTokenLooksLikeSetupCode -> {
@@ -1016,7 +1016,7 @@ fun OnboardingFlow(
           checkRequested = nodeApprovalCheckRequested,
           ready = ready,
           onBack = ::goBack,
-          onCopyCommand = { command -> copyOnboardingText(context, "OpenClaw pairing approval command", command, nativeText("Approval command copied")) },
+          onCopyCommand = { command -> copyOnboardingText(context, "Orion pairing approval command", command, nativeText("Approval command copied")) },
           onCheckApproval = ::checkNodeApproval,
           onApprove = { requestId ->
             nodeApprovalCheckRequested = false
@@ -1078,8 +1078,8 @@ internal fun WelcomeScreen(
       ) {
         OnboardingHeroTopSpacer(afterHeader = false)
         OnboardingIntroHero(
-          title = nativeString("Welcome to OpenClaw"),
-          subtitle = nativeString("Turn this device into a secure OpenClaw node for chat, voice, camera, and device tools."),
+          title = nativeString("Welcome to Orion"),
+          subtitle = nativeString("Turn this device into a secure Orion node for chat, voice, camera, and device tools."),
           mark = { WelcomeLogo(mood = mascotMood, announceLogo = true) },
         )
         Spacer(modifier = Modifier.height(24.dp))
@@ -1096,6 +1096,7 @@ internal fun WelcomeScreen(
 }
 
 @Composable
+@Suppress("UNUSED_PARAMETER")
 private fun WelcomeLogo(
   mood: MascotMood,
   // Only the welcome hero announces the logo; status/error reuses are
@@ -1110,10 +1111,9 @@ private fun WelcomeLogo(
     border = BorderStroke(1.dp, ClawTheme.colors.border),
   ) {
     Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.Center) {
-      OpenClawMascot(
-        contentDescription = if (announceLogo) nativeString("OpenClaw logo") else null,
+      OrionMark(
+        contentDescription = if (announceLogo) nativeString("Orion logo") else null,
         modifier = Modifier.fillMaxSize(),
-        mood = mood,
       )
     }
   }
@@ -1172,7 +1172,7 @@ private fun WelcomeChecklist() {
     Column(verticalArrangement = Arrangement.spacedBy(13.dp)) {
       WelcomeChecklistRow(icon = Icons.Default.Link, text = nativeString("Connect to your Gateway"))
       WelcomeChecklistRow(icon = Icons.Default.Security, text = nativeString("Choose device permissions"))
-      WelcomeChecklistRow(icon = Icons.Default.CheckCircle, text = nativeString("Use OpenClaw from your phone"))
+      WelcomeChecklistRow(icon = Icons.Default.CheckCircle, text = nativeString("Use Orion from your phone"))
     }
   }
 }
@@ -1196,7 +1196,7 @@ private fun SecurityNotice() {
       Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(text = nativeString("Security notice"), style = ClawTheme.type.section, color = ClawTheme.colors.text)
         Text(
-          text = nativeString("The connected OpenClaw agent can use device capabilities you enable. Continue only if you trust the Gateway and agent you connect to."),
+          text = nativeString("The connected Orion agent can use device capabilities you enable. Continue only if you trust the Gateway and agent you connect to."),
           style = ClawTheme.type.body,
           color = ClawTheme.colors.textMuted,
         )
@@ -1241,7 +1241,7 @@ internal fun GatewaySetupScreen(
         OnboardingHeroTopSpacer(afterHeader = true)
         OnboardingIntroHero(
           title = nativeString("Connect Gateway"),
-          subtitle = nativeString("Scan a QR code or use the setup code from your OpenClaw Gateway."),
+          subtitle = nativeString("Scan a QR code or use the setup code from your Orion Gateway."),
           mark = { GatewayLogo() },
         )
         Spacer(modifier = Modifier.height(24.dp))
@@ -1269,9 +1269,34 @@ internal fun GatewaySetupScreen(
           onClick = onManualSetup,
           modifier = Modifier.onboardingActionButton(),
         )
+        OnDeviceGatewayButton()
       }
     }
   }
+}
+
+/** Starts the gateway that runs inside this app and connects to it; onboarding continues once connected. */
+@Composable
+private fun OnDeviceGatewayButton() {
+  val context = LocalContext.current
+  val gateway = remember { (context.applicationContext as? ai.openclaw.app.NodeApp)?.onDeviceGateway } ?: return
+  val state by gateway.state.collectAsState()
+  if (state is ai.openclaw.app.ondevice.OnDeviceState.Unsupported) return
+  val label =
+    when (val s = state) {
+      is ai.openclaw.app.ondevice.OnDeviceState.Installing -> s.step
+      ai.openclaw.app.ondevice.OnDeviceState.Starting -> nativeString("Starting the gateway…")
+      is ai.openclaw.app.ondevice.OnDeviceState.Running -> nativeString("Connecting…")
+      is ai.openclaw.app.ondevice.OnDeviceState.Failed -> s.message
+      else -> null
+    }
+  ClawSecondaryButton(
+    text = nativeString("Run Orion on this phone"),
+    icon = Icons.Default.QrCode2,
+    onClick = { ai.openclaw.app.ondevice.OnDeviceGatewayService.start(context) },
+    modifier = Modifier.onboardingActionButton(),
+  )
+  label?.let { Text(text = it, style = ClawTheme.type.caption, color = ClawTheme.colors.textMuted, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
 }
 
 @Composable
@@ -1293,7 +1318,7 @@ private fun GatewayPrerequisites(onOpenSetupGuide: () -> Unit) {
     )
     GatewayPrerequisiteRow(
       title = nativeString("Access to the Gateway device"),
-      body = nativeString("Have a terminal open on the device running OpenClaw."),
+      body = nativeString("Have a terminal open on the device running Orion."),
     )
     GatewayPrerequisiteRow(
       title = nativeString("Phone can reach the Gateway"),
@@ -2044,7 +2069,7 @@ private fun GatewayRecoveryScreen(
     GatewayRecoveryDiagnosticDialog(
       diagnosticText = diagnosticText,
       onDismiss = { diagnosticDialogVisible = false },
-      onCopy = { copyOnboardingText(context, "OpenClaw gateway diagnostic", diagnosticText, nativeText("Details copied")) },
+      onCopy = { copyOnboardingText(context, "Orion gateway diagnostic", diagnosticText, nativeText("Details copied")) },
     )
   }
 
@@ -2087,7 +2112,7 @@ private fun GatewayRecoveryScreen(
         )
         approvalCommand?.let { command ->
           Spacer(modifier = Modifier.height(18.dp))
-          ApprovalCommandBlock(command = command, onCopy = { copyOnboardingText(context, "OpenClaw pairing approval command", command, nativeText("Approval command copied")) })
+          ApprovalCommandBlock(command = command, onCopy = { copyOnboardingText(context, "Orion pairing approval command", command, nativeText("Approval command copied")) })
         }
         protocolUpdateCommand?.let { command ->
           Spacer(modifier = Modifier.height(18.dp))
@@ -2097,7 +2122,7 @@ private fun GatewayRecoveryScreen(
             color = ClawTheme.colors.textMuted,
           )
           Spacer(modifier = Modifier.height(8.dp))
-          ApprovalCommandBlock(command = command, onCopy = { copyOnboardingText(context, "OpenClaw gateway command", command, nativeText("Command copied")) })
+          ApprovalCommandBlock(command = command, onCopy = { copyOnboardingText(context, "Orion gateway command", command, nativeText("Command copied")) })
         }
         if (recoveryProgressItems.isNotEmpty()) {
           Spacer(modifier = Modifier.height(20.dp))
@@ -2227,7 +2252,7 @@ private fun NodeApprovalScreen(
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-          text = nativeString("Gateway pairing is complete. Approve this phone as a node so OpenClaw can use the device capabilities you enable."),
+          text = nativeString("Gateway pairing is complete. Approve this phone as a node so Orion can use the device capabilities you enable."),
           style = ClawTheme.type.body,
           color = ClawTheme.colors.textMuted,
           textAlign = TextAlign.Center,
@@ -2716,11 +2741,11 @@ internal enum class GatewayRecoveryUiState(
   ),
   Pairing(
     title = nativeText("Pairing Gateway"),
-    message = nativeText("Approval is in progress.\nOpenClaw will reconnect automatically."),
+    message = nativeText("Approval is in progress.\nOrion will reconnect automatically."),
   ),
   Finishing(
     title = nativeText("Connecting Gateway"),
-    message = nativeText("OpenClaw is checking gateway and node access."),
+    message = nativeText("Orion is checking gateway and node access."),
   ),
   Failed(
     title = nativeText("Connection issue"),
@@ -2789,7 +2814,7 @@ internal fun gatewayRecoveryDiagnosticText(
 ): String =
   // Diagnostic labels are UI copy; values stay verbatim so copied evidence matches gateway state.
   listOf(
-    localizeLabel("OpenClaw Android gateway diagnostic"),
+    localizeLabel("Orion Android gateway diagnostic"),
     "${localizeLabel("Gateway")}: $gatewayName",
     "${localizeLabel("Status")}: $statusText",
     "${localizeLabel("Gateway paired")}: $gatewayPaired",
@@ -2919,7 +2944,7 @@ internal fun recoveryGatewayAuthDetail(gatewayConnectionProblem: GatewayConnecti
   when (gatewayConnectionProblem.code) {
     "NETWORK_UNREACHABLE" -> {
       if (gatewayConnectionProblem.isTailscaleRoute && gatewayConnectionProblem.reason != "transport-cleanup") {
-        nativeString("This address may use Tailscale. Open Tailscale and connect to the Gateway's tailnet, then retry. Check that the Gateway computer is online and OpenClaw is running.")
+        nativeString("This address may use Tailscale. Open Tailscale and connect to the Gateway's tailnet, then retry. Check that the Gateway computer is online and Orion is running.")
       } else {
         gatewayConnectionStatusForDisplay(gatewayConnectionProblem.message)
       }
@@ -2979,15 +3004,15 @@ private fun recoveryGatewayProtocolMismatchDetail(gatewayConnectionProblem: Gate
   val summary =
     when {
       clientMax != null && expected != null && clientMax < expected -> {
-        nativeString("This app is older than the Gateway. Update OpenClaw on this device, then retry.")
+        nativeString("This app is older than the Gateway. Update Orion on this device, then retry.")
       }
 
       clientMin != null && expected != null && clientMin > expected -> {
-        nativeString("The Gateway is older than this app. Update OpenClaw on the Gateway host, then retry.")
+        nativeString("The Gateway is older than this app. Update Orion on the Gateway host, then retry.")
       }
 
       else -> {
-        nativeString("The app and Gateway use incompatible protocol versions. Update OpenClaw on both, then retry.")
+        nativeString("The app and Gateway use incompatible protocol versions. Update Orion on both, then retry.")
       }
     }
   return protocolMismatchVersions(clientMin, clientMax, expected)?.let { nativeString("\$summary \$details", summary, it) } ?: summary
@@ -3433,7 +3458,7 @@ private fun rememberPermissionState(
       PermissionRowModel(PermissionRowId.Calendar, nativeText("Calendar"), nativeText("Read and update events"), Icons.Default.CalendarMonth, calendarGranted) {
         request(PermissionRowId.Calendar.runtimePermissions)
       },
-      PermissionRowModel(PermissionRowId.Notifications, nativeText("Notifications"), nativeText("Show OpenClaw alerts"), Icons.Default.Notifications, notificationsGranted) {
+      PermissionRowModel(PermissionRowId.Notifications, nativeText("Notifications"), nativeText("Show Orion alerts"), Icons.Default.Notifications, notificationsGranted) {
         request(PermissionRowId.Notifications.runtimePermissions)
       },
       PermissionRowModel(PermissionRowId.NotificationListener, nativeText("Notification listener"), nativeText("Read selected app notifications"), Icons.Default.Sensors, notificationListenerGranted) {

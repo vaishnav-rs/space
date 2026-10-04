@@ -91,7 +91,7 @@ class ChatMessageReactionsTest {
       }
     }
     composeRule
-      .onNode(hasContentDescription("OpenClaw") and hasText("diagram.png"))
+      .onNode(hasContentDescription("Orion") and hasText("diagram.png"))
       .performSemanticsAction(SemanticsActions.OnLongClick) { it() }
     composeRule.onNodeWithText("Copy").assertDoesNotExist()
     composeRule.onNodeWithText("Add reaction").performClick()
@@ -118,7 +118,7 @@ class ChatMessageReactionsTest {
       }
     }
     composeRule
-      .onNode(hasContentDescription("OpenClaw") and hasText("Saved reply"))
+      .onNode(hasContentDescription("Orion") and hasText("Saved reply"))
       .performSemanticsAction(SemanticsActions.OnLongClick) { it() }
     composeRule.onNodeWithText("Add reaction").performClick()
     composeRule.onNodeWithText("More…").performClick()

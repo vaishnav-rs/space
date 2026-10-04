@@ -86,7 +86,7 @@ internal fun SystemAgentSettingsScreen(
           onClick = onBack,
         )
         Text(
-          text = nativeString("OpenClaw"),
+          text = nativeString("Orion"),
           style = ClawTheme.type.display,
           color = ClawTheme.colors.text,
           modifier = Modifier.weight(1f),
@@ -134,10 +134,10 @@ private fun SystemAgentAccessGate(state: SystemAgentChatState) {
     }
   val detail =
     when (state.access) {
-      SystemAgentChatAccess.Disconnected -> nativeString("Connect this phone to a Gateway before opening OpenClaw.")
+      SystemAgentChatAccess.Disconnected -> nativeString("Connect this phone to a Gateway before opening Orion.")
       SystemAgentChatAccess.MissingAdminScope -> nativeString("Reconnect with operator.admin access to review and change Gateway settings.")
-      SystemAgentChatAccess.CheckingGateway -> nativeString("Checking whether this Gateway supports the OpenClaw settings assistant.")
-      SystemAgentChatAccess.GatewayUpdateRequired -> nativeString("Update this Gateway to use the OpenClaw settings assistant.")
+      SystemAgentChatAccess.CheckingGateway -> nativeString("Checking whether this Gateway supports the Orion settings assistant.")
+      SystemAgentChatAccess.GatewayUpdateRequired -> nativeString("Update this Gateway to use the Orion settings assistant.")
       SystemAgentChatAccess.Ready -> ""
     }
   ClawPanel(modifier = Modifier.fillMaxWidth()) {
@@ -237,7 +237,7 @@ private fun SystemAgentConversation(
           }
 
           SystemAgentConversationRow.Working -> {
-            Text(nativeString("OpenClaw is working…"), style = ClawTheme.type.caption, color = ClawTheme.colors.textMuted)
+            Text(nativeString("Orion is working…"), style = ClawTheme.type.caption, color = ClawTheme.colors.textMuted)
           }
 
           is SystemAgentConversationRow.Message -> {
@@ -278,7 +278,7 @@ private fun SystemAgentConversation(
     state.handoff?.let {
       ClawPanel(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          Text(nativeString("OpenClaw is ready to continue in your ordinary chat."), style = ClawTheme.type.body, color = ClawTheme.colors.textMuted)
+          Text(nativeString("Orion is ready to continue in your ordinary chat."), style = ClawTheme.type.body, color = ClawTheme.colors.textMuted)
           ClawPrimaryButton(text = nativeString("Open Chat"), onClick = onOpenChat)
         }
       }
@@ -361,7 +361,7 @@ private fun SystemAgentComposer(
         if (state.expectsSensitiveReply) {
           nativeString("Enter secret…")
         } else {
-          nativeString("Reply to OpenClaw…")
+          nativeString("Reply to Orion…")
         },
       secret = state.expectsSensitiveReply,
       maxLines = 5,

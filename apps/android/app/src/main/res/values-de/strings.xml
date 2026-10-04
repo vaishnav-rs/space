@@ -1,5 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">OpenClaw Node</string>
+    <string name="app_name">Orion</string>
     <string name="trust_this_gateway">Diesem Gateway vertrauen?</string>
     <string name="trust_and_continue">Vertrauen und fortfahren</string>
     <string name="cancel">Abbrechen</string>
@@ -16,8 +16,8 @@
     <string name="about_build_date_accessibility">Build-Datum %1$s</string>
     <string name="about_build_copy_commit">Vollständigen Git-Commit-Hash kopieren</string>
     <string name="about_build_copy_timestamp">Vollständigen Build-Zeitstempel kopieren</string>
-    <string name="about_build_commit_clipboard_label">Git-Commit von OpenClaw</string>
-    <string name="about_build_timestamp_clipboard_label">Build-Zeitstempel von OpenClaw</string>
+    <string name="about_build_commit_clipboard_label">Git-Commit von Orion</string>
+    <string name="about_build_timestamp_clipboard_label">Build-Zeitstempel von Orion</string>
     <string name="about_build_commit_copied">Git-Commit kopiert</string>
     <string name="about_build_timestamp_copied">Build-Zeitstempel kopiert</string>
 </resources>

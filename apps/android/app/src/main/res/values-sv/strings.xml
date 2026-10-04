@@ -1,5 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">OpenClaw-nod</string>
+    <string name="app_name">Orion-nod</string>
     <string name="trust_this_gateway">Lita på denna gateway?</string>
     <string name="trust_and_continue">Lita på och fortsätt</string>
     <string name="cancel">Avbryt</string>
@@ -16,8 +16,8 @@
     <string name="about_build_date_accessibility">Byggdatum %1$s</string>
     <string name="about_build_copy_commit">Kopiera fullständig Git-commit-hash</string>
     <string name="about_build_copy_timestamp">Kopiera hela tidsstämpeln för bygget</string>
-    <string name="about_build_commit_clipboard_label">Git-commit för OpenClaw</string>
-    <string name="about_build_timestamp_clipboard_label">Byggtidsstämpel för OpenClaw</string>
+    <string name="about_build_commit_clipboard_label">Git-commit för Orion</string>
+    <string name="about_build_timestamp_clipboard_label">Byggtidsstämpel för Orion</string>
     <string name="about_build_commit_copied">Git-commit kopierad</string>
     <string name="about_build_timestamp_copied">Byggtidsstämpel kopierad</string>
 </resources>

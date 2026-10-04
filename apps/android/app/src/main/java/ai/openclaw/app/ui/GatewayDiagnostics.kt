@@ -192,5 +192,5 @@ internal fun copyGatewayDiagnosticsReport(
 ) {
   val clipboard = context.getSystemService(ClipboardManager::class.java) ?: return
   val report = buildGatewayDiagnosticsReport(screen = screen, gatewayAddress = gatewayAddress, statusText = statusText)
-  clipboard.copyTextWithConfirmation(context, "OpenClaw gateway diagnostics", report, nativeString("Copied gateway diagnostics"))
+  clipboard.copyTextWithConfirmation(context, "Orion gateway diagnostics", report, nativeString("Copied gateway diagnostics"))
 }

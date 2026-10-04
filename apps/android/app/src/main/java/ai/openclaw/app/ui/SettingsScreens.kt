@@ -64,7 +64,7 @@ import ai.openclaw.app.ui.design.ClawStatusPill
 import ai.openclaw.app.ui.design.ClawTextBadge
 import ai.openclaw.app.ui.design.ClawTextField
 import ai.openclaw.app.ui.design.ClawTheme
-import ai.openclaw.app.ui.design.OpenClawMascot
+import ai.openclaw.app.ui.design.OrionMark
 import ai.openclaw.app.ui.design.TalkWaveform
 import ai.openclaw.app.ui.design.TalkWaveformPhase
 import ai.openclaw.app.ui.design.agentAvatarSource
@@ -285,7 +285,7 @@ private fun CronJobsSettingsScreen(
 
   SettingsDetailFrame(
     title = nativeString("Automations"),
-    subtitle = nativeString("Scheduled OpenClaw work from your gateway."),
+    subtitle = nativeString("Scheduled Orion work from your gateway."),
     icon = SettingsRoute.CronJobs.icon,
     onBack = onBack,
     trailingAction = {
@@ -641,9 +641,9 @@ private fun ProfileSettingsScreen(
   onBack: () -> Unit,
 ) {
   val displayName by viewModel.displayName.collectAsState()
-  var draft by remember(displayName) { mutableStateOf(displayName.ifBlank { "OpenClaw" }) }
+  var draft by remember(displayName) { mutableStateOf(displayName.ifBlank { "Orion" }) }
 
-  SettingsDetailFrame(title = nativeString("Profile"), subtitle = nativeString("How this phone appears to OpenClaw."), icon = SettingsRoute.Profile.icon, onBack = onBack) {
+  SettingsDetailFrame(title = nativeString("Profile"), subtitle = nativeString("How this phone appears to Orion."), icon = SettingsRoute.Profile.icon, onBack = onBack) {
     ClawPanel(verticalArrangement = Arrangement.spacedBy(ClawTheme.spacing.xxs)) {
       ClawTextField(value = draft, onValueChange = { draft = it }, placeholder = nativeString("Device name"))
       ClawPrimaryButton(text = nativeString("Save Profile"), onClick = { viewModel.setDisplayName(draft) }, enabled = draft.isNotBlank())
@@ -714,7 +714,7 @@ private fun VoiceSettingsScreen(
               title = nativeString("Listen for wake words"),
               subtitle =
                 if (voiceWakeAvailable) {
-                  nativeString("Runs on-device while OpenClaw is visible.")
+                  nativeString("Runs on-device while Orion is visible.")
                 } else {
                   nativeString("On-device speech recognition is unavailable.")
                 },
@@ -794,7 +794,7 @@ private fun VoiceSettingsScreen(
         onSelect = viewModel::setPreferredAudioInputDevice,
       )
       Text(text = nativeString("Audio Test"), style = ClawTheme.type.section, color = ClawTheme.colors.text)
-      Text(text = nativeString("Check that OpenClaw can speak clearly on this phone."), style = ClawTheme.type.body, color = ClawTheme.colors.textMuted)
+      Text(text = nativeString("Check that Orion can speak clearly on this phone."), style = ClawTheme.type.body, color = ClawTheme.colors.textMuted)
       SettingsWaveformPanel(active = speakerEnabled, onClick = ::playVoiceSetupTone)
       VoiceSetupActionRow(
         title = if (speakerEnabled) nativeString("Mute speaker") else nativeString("Enable speaker"),
@@ -1072,11 +1072,11 @@ private fun NotificationSettingsScreen(
     }
   }
 
-  SettingsDetailFrame(title = nativeString("Notifications"), subtitle = nativeString("Choose what reaches OpenClaw."), icon = SettingsRoute.Notifications.icon, onBack = onBack) {
+  SettingsDetailFrame(title = nativeString("Notifications"), subtitle = nativeString("Choose what reaches Orion."), icon = SettingsRoute.Notifications.icon, onBack = onBack) {
     SettingsTogglePanel(
       rows =
         listOf(
-          SettingsToggleRow(nativeString("Forward Notifications"), if (enabled) nativeString("OpenClaw can receive selected alerts.") else nativeString("Alerts stay on this phone."), Icons.Default.Notifications, enabled, ::setForwarding),
+          SettingsToggleRow(nativeString("Forward Notifications"), if (enabled) nativeString("Orion can receive selected alerts.") else nativeString("Alerts stay on this phone."), Icons.Default.Notifications, enabled, ::setForwarding),
           SettingsToggleRow(
             nativeString("Quiet Hours"),
             nativeString("\$quietStart to \$quietEnd", quietStart, quietEnd),
@@ -1458,7 +1458,7 @@ private fun PhoneCapabilitiesScreen(
           },
           SettingsToggleRow(
             nativeString("Installed Apps"),
-            if (installedAppsSharingEnabled) nativeString("OpenClaw can list launcher-visible apps.") else nativeString("App list stays on this phone."),
+            if (installedAppsSharingEnabled) nativeString("Orion can list launcher-visible apps.") else nativeString("App list stays on this phone."),
             Icons.Default.Storage,
             installedAppsSharingEnabled,
             ::setInstalledAppsSharing,
@@ -1479,7 +1479,7 @@ private fun PhoneCapabilitiesScreen(
       )
       if (backgroundLocationAvailable) {
         Text(
-          text = nativeString("Always allows requested location checks while OpenClaw is in the background; Android shows this in the persistent node notification."),
+          text = nativeString("Always allows requested location checks while Orion is in the background; Android shows this in the persistent node notification."),
           style = ClawTheme.type.caption,
           color = ClawTheme.colors.textMuted,
         )
@@ -1517,7 +1517,7 @@ private fun PhoneCapabilitiesScreen(
       text = {
         Text(
           nativeString(
-            "OpenClaw only checks location when your paired Gateway requests it. On the next Android screen, choose \$backgroundPermissionLabel to allow checks while the app is in the background.",
+            "Orion only checks location when your paired Gateway requests it. On the next Android screen, choose \$backgroundPermissionLabel to allow checks while the app is in the background.",
             backgroundPermissionLabel,
           ),
         )
@@ -1553,10 +1553,10 @@ private fun InstalledAppsDisclosureDialog(
     text = {
       Column(verticalArrangement = Arrangement.spacedBy(ClawTheme.spacing.xxs)) {
         Text(
-          nativeString("OpenClaw collects and sends the names, package IDs, and status of apps visible on this phone when your paired OpenClaw Gateway asks for them. This lets your assistant answer questions and take actions using installed apps."),
+          nativeString("Orion collects and sends the names, package IDs, and status of apps visible on this phone when your paired Orion Gateway asks for them. This lets your assistant answer questions and take actions using installed apps."),
         )
         Text(
-          nativeString("Your phone sends this information to your Gateway, not to a server run by OpenClaw. Your Gateway may include it in requests to the AI provider you chose."),
+          nativeString("Your phone sends this information to your Gateway, not to a server run by Orion. Your Gateway may include it in requests to the AI provider you chose."),
         )
       }
     },
@@ -1763,7 +1763,7 @@ private fun GatewaySettingsScreen(
 
   SettingsDetailFrame(
     title = nativeString("Gateway"),
-    subtitle = nativeString("Connection between this phone and OpenClaw."),
+    subtitle = nativeString("Connection between this phone and Orion."),
     icon = SettingsRoute.Gateway.icon,
     onBack = onBack,
     trailingAction = {
@@ -2334,7 +2334,7 @@ private fun AboutSettingsScreen(
   val currentGatewayVersion = updateAvailable?.currentVersion?.takeIf { it.isNotBlank() } ?: gatewayVersion
   val appLocale = LocalConfiguration.current.locales[0]
 
-  SettingsDetailFrame(title = nativeString("About"), subtitle = nativeString("OpenClaw for Android."), icon = SettingsRoute.About.icon, onBack = onBack) {
+  SettingsDetailFrame(title = nativeString("About"), subtitle = nativeString("Orion for Android."), icon = SettingsRoute.About.icon, onBack = onBack) {
     AboutHeroPanel()
     AboutBuildIdentityPanel(
       versionName = BuildConfig.VERSION_NAME,
@@ -2366,7 +2366,7 @@ private fun AboutSettingsScreen(
     SettingsMessagePanel(text = aboutUpdateText(latestVersion = latestVersion))
     AboutLinksPanel()
     Text(
-      text = nativeString("© 2026 OpenClaw Foundation — MIT License."),
+      text = nativeString("© 2026 Orion Foundation — MIT License."),
       style = ClawTheme.type.caption,
       color = ClawTheme.colors.textSubtle,
       modifier = Modifier.fillMaxWidth(),
@@ -2383,9 +2383,9 @@ private fun AboutHeroPanel() {
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.spacedBy(ClawTheme.spacing.xxs),
     ) {
-      OpenClawMascot(contentDescription = nativeString("OpenClaw logo"), modifier = Modifier.size(96.dp))
+      OrionMark(contentDescription = nativeString("Orion logo"), modifier = Modifier.size(96.dp))
       Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(text = nativeString("OpenClaw"), style = ClawTheme.type.section, color = ClawTheme.colors.text)
+        Text(text = nativeString("Orion"), style = ClawTheme.type.section, color = ClawTheme.colors.text)
         Text(text = nativeString("Personal AI on your devices"), style = ClawTheme.type.caption, color = ClawTheme.colors.textMuted)
       }
     }
@@ -2446,7 +2446,7 @@ private fun LicensesSettingsScreen(onBack: () -> Unit) {
 
   SettingsDetailFrame(
     title = nativeString("Licenses"),
-    subtitle = if (selectedLicense == null) nativeString("OpenClaw appreciates its partners in the open-source community.") else "",
+    subtitle = if (selectedLicense == null) nativeString("Orion appreciates its partners in the open-source community.") else "",
     subtitleTextAlign = TextAlign.Center,
     icon = SettingsRoute.Licenses.icon,
     onBack = backToListOrSettings,
@@ -2532,7 +2532,7 @@ private fun AboutStatusRow(
 
 private fun aboutUpdateText(latestVersion: String?): String =
   if (latestVersion == null) {
-    nativeString("OpenClaw turns this phone into a clean mobile command surface for threads, voice, providers, and Gateway.")
+    nativeString("Orion turns this phone into a clean mobile command surface for threads, voice, providers, and Gateway.")
   } else {
     nativeString("A Gateway update is available. Run the update from the Web UI or CLI when you are ready.")
   }

@@ -633,7 +633,7 @@ internal fun ClawComponentShowcase(modifier: Modifier = Modifier) {
   ClawScaffold(modifier = modifier) {
     Column(verticalArrangement = Arrangement.spacedBy(ClawTheme.spacing.sm)) {
       ClawTopBar(
-        title = "OpenClaw",
+        title = "Orion",
         subtitle = "Local command center",
         navigation = { ClawAvatarMark(text = "OC") },
         actions = {
@@ -647,7 +647,7 @@ internal fun ClawComponentShowcase(modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.SpaceBetween,
       ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-          Text(text = "OpenClaw", style = ClawTheme.type.display, color = ClawTheme.colors.text)
+          Text(text = "Orion", style = ClawTheme.type.display, color = ClawTheme.colors.text)
           Text(text = "Design system prototype", style = ClawTheme.type.body, color = ClawTheme.colors.textMuted)
         }
         ClawStatusPill(text = "Connected", status = ClawStatus.Success)
@@ -669,7 +669,7 @@ internal fun ClawComponentShowcase(modifier: Modifier = Modifier) {
         )
         ClawListItem(
           title = "Provider setup",
-          subtitle = "OpenClaw gateway",
+          subtitle = "Orion gateway",
           metadata = "8m",
         )
       }
@@ -689,7 +689,7 @@ internal fun ClawComponentShowcase(modifier: Modifier = Modifier) {
 
       ClawEmptyState(
         title = "Nothing needs your attention",
-        body = "OpenClaw will surface approvals, failed jobs, and channel issues here.",
+        body = "Orion will surface approvals, failed jobs, and channel issues here.",
       )
 
       ClawBottomNav(

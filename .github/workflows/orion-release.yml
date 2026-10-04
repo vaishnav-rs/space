@@ -43,7 +43,7 @@ jobs:
             if [ "$PRERELEASE" = "true" ]; then FLAGS="--prerelease"; fi
             gh release create "$TAG" $FLAGS --title "Orion ${TAG}" --target "${{ github.sha }}" --notes "Orion ${TAG}
 
-          - orion-${TAG}.apk: the Android app with the gateway, Node, git and ssh inside. Install it, open Settings, On this phone, tap Set up and start.
+          - Orion-${TAG#orion-}.apk: the Android app with the gateway, Node, git and ssh inside. Install it, open Settings, On this phone, tap Set up and start.
           - openclaw-*.tgz: the gateway as a package, for running Orion on a computer or server.
           - orion-setup.sh / orion-setup.mts: one-command setup for that computer or server.
 
@@ -121,9 +121,10 @@ jobs:
           APK="$(ls apps/android/app/build/outputs/apk/thirdParty/release/*.apk | head -n1)"
           # Not dist/: that is the gateway build output folder in the repository.
           mkdir -p apk-out
-          cp "$APK" "apk-out/orion-${TAG}.apk"
-          (cd apk-out && sha256sum "orion-${TAG}.apk" > "orion-${TAG}.apk.sha256")
-          "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n1)/apksigner" verify --print-certs "apk-out/orion-${TAG}.apk"
+          NAME="Orion-${TAG#orion-}.apk"
+          cp "$APK" "apk-out/$NAME"
+          (cd apk-out && sha256sum "$NAME" > "$NAME.sha256")
+          "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n1)/apksigner" verify --print-certs "apk-out/$NAME"
           ls -lh apk-out
 
       - name: Upload to the release

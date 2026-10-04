@@ -34,7 +34,7 @@ import ai.openclaw.app.ui.design.ClawSecondaryButton
 import ai.openclaw.app.ui.design.ClawSeparatedColumn
 import ai.openclaw.app.ui.design.ClawStatus
 import ai.openclaw.app.ui.design.ClawTheme
-import ai.openclaw.app.ui.design.OpenClawMascot
+import ai.openclaw.app.ui.design.OrionMark
 import ai.openclaw.app.ui.design.agentAvatarSource
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
@@ -567,7 +567,7 @@ private fun OverviewScreen(
           item {
             ClawEmptyState(
               title = nativeString("No recent threads"),
-              body = nativeString("Start a chat and your active OpenClaw conversations will appear here."),
+              body = nativeString("Start a chat and your active Orion conversations will appear here."),
               action = { ClawSecondaryButton(text = nativeString("Start Chat"), onClick = { onSelectTab(Tab.Chat) }) },
             )
           }
@@ -614,9 +614,9 @@ private fun OverviewHeader(
         modifier = Modifier.testTag("sidebar-open-overview"),
       )
     }
-    OpenClawMascot(modifier = Modifier.size(25.dp))
+    OrionMark(modifier = Modifier.size(25.dp))
     Text(
-      text = nativeString("OpenClaw"),
+      text = nativeString("Orion"),
       style = ClawTheme.type.title,
       color = ClawTheme.colors.text,
       modifier = Modifier.weight(1f),
@@ -961,7 +961,7 @@ internal fun overviewAgentName(
   defaultAgentId: String?,
 ): String {
   val agent = overviewAgent(agents = agents, defaultAgentId = defaultAgentId)
-  return agent?.name?.takeIf { it.isNotBlank() } ?: agent?.id?.takeIf { it.isNotBlank() } ?: nativeString("OpenClaw")
+  return agent?.name?.takeIf { it.isNotBlank() } ?: agent?.id?.takeIf { it.isNotBlank() } ?: nativeString("Orion")
 }
 
 internal fun overviewAgentBadgeText(
@@ -975,7 +975,7 @@ internal fun overviewAgentBadgeText(
     ?.takeIf { it.isNotEmpty() }
     ?.let { return it }
   if (agent == null) return "OC"
-  val source = agent.name?.takeIf { it.isNotBlank() } ?: agent.id.takeIf { it.isNotBlank() } ?: nativeString("OpenClaw")
+  val source = agent.name?.takeIf { it.isNotBlank() } ?: agent.id.takeIf { it.isNotBlank() } ?: nativeString("Orion")
   return agentInitials(source)
 }
 
@@ -1048,7 +1048,7 @@ internal fun sessionSourceLabel(
     } else {
       normalized
     }
-  if (!scopedKey.contains(':') && !scopedKey.contains('#')) return nativeString("OpenClaw")
+  if (!scopedKey.contains(':') && !scopedKey.contains('#')) return nativeString("Orion")
   val source = scopedKey.substringBefore(':').substringBefore('#').lowercase()
   val channelLabel =
     channelsSummary
@@ -1058,7 +1058,7 @@ internal fun sessionSourceLabel(
       }?.label
       ?.takeIf { it.isNotBlank() }
   if (channelLabel != null) return channelLabel
-  return nativeString(sessionSourceLabels[source] ?: "OpenClaw")
+  return nativeString(sessionSourceLabels[source] ?: "Orion")
 }
 
 internal data class HomeAttentionRow(
@@ -1397,7 +1397,7 @@ private fun SettingsShellScreen(
       }
       item {
         SettingsListRow(
-          title = verbatimText(displayName.ifBlank { "OpenClaw" }),
+          title = verbatimText(displayName.ifBlank { "Orion" }),
           value = nativeText("Device name and identity"),
           icon = SettingsRoute.Profile.icon,
           actionDescription = nativeString("Open profile"),
@@ -1449,7 +1449,7 @@ private fun SettingsShellScreen(
       item {
         Text(
           modifier = Modifier.fillMaxWidth().padding(top = ClawTheme.spacing.lg),
-          text = nativeString("OpenClaw \${BuildConfig.VERSION_NAME} (\${BuildConfig.VERSION_CODE})", BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE),
+          text = nativeString("Orion \${BuildConfig.VERSION_NAME} (\${BuildConfig.VERSION_CODE})", BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE),
           style = ClawTheme.type.caption,
           color = ClawTheme.colors.textMuted,
           textAlign = TextAlign.Center,

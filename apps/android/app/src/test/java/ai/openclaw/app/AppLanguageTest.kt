@@ -123,7 +123,7 @@ class AppLanguageTest {
   @Test
   fun systemSubtitleReportsTheActualSystemLocale() {
     assertEquals("Follow Android · en-US", appLanguageRowSubtitle(AppLanguage.System, "en-US"))
-    assertEquals("OpenClaw translations · ja", appLanguageRowSubtitle(AppLanguage.Japanese, "en-US"))
+    assertEquals("Orion translations · ja", appLanguageRowSubtitle(AppLanguage.Japanese, "en-US"))
   }
 
   @Test

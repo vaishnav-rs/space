@@ -756,7 +756,7 @@ class ChatReaderScrollOwnershipLayoutTest {
     val clip = transcript.fetchSemanticsNode().boundsInRoot
     val caption =
       composeRule
-        .onNodeWithText("OpenClaw · Live", useUnmergedTree = true)
+        .onNodeWithText("Orion · Live", useUnmergedTree = true)
         .assertIsDisplayed()
         .fetchSemanticsNode()
         .boundsInRoot
@@ -773,7 +773,7 @@ class ChatReaderScrollOwnershipLayoutTest {
     val layout = reader.listState.layoutInfo
     val first = layout.visibleItemsInfo.single { it.index == reader.listState.firstVisibleItemIndex }
     assertEquals("stream", first.key)
-    composeRule.onNodeWithText("OpenClaw · Live", useUnmergedTree = true).assertIsDisplayed()
+    composeRule.onNodeWithText("Orion · Live", useUnmergedTree = true).assertIsDisplayed()
     composeRule.onNode(hasText("S001 Synthetic", substring = true), useUnmergedTree = true).assertIsNotDisplayed()
     assertTrue("The real timeline keeps Thinking between stream and older reply", layout.visibleItemsInfo.any { it.key == "thinking" })
     val olderKey = if (collapsedUserPrompt) "message:old user" else "message:assistant 59"

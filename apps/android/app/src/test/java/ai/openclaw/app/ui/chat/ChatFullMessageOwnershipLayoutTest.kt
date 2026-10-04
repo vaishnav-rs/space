@@ -229,7 +229,7 @@ class ChatFullMessageOwnershipLayoutTest {
     composeRule.waitForIdle()
     // The metadata action must not replace the bubble's existing long-press actions.
     composeRule
-      .onNode(hasContentDescription("OpenClaw") and hasText("Plant herbs", substring = true))
+      .onNode(hasContentDescription("Orion") and hasText("Plant herbs", substring = true))
       .performSemanticsAction(SemanticsActions.OnLongClick) { it() }
     composeRule.onNode(hasText("Reply") and hasClickAction()).assertExists()
     composeRule.onNode(hasText("Listen") and hasClickAction()).assertExists()
@@ -878,7 +878,7 @@ class ChatFullMessageOwnershipLayoutTest {
     }
     composeRule.onNodeWithText("Show less").assertIsDisplayed()
     composeRule.onNode(isDialog()).assertDoesNotExist()
-    composeRule.onNode(hasContentDescription("OpenClaw")).performSemanticsAction(SemanticsActions.OnLongClick) { it() }
+    composeRule.onNode(hasContentDescription("Orion")).performSemanticsAction(SemanticsActions.OnLongClick) { it() }
     composeRule.onNodeWithText("Copy").performClick()
     val clipboard = app.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     assertEquals(
@@ -889,7 +889,7 @@ class ChatFullMessageOwnershipLayoutTest {
         ?.text
         ?.toString(),
     )
-    val insideMessage = hasAnyAncestor(hasContentDescription("OpenClaw"))
+    val insideMessage = hasAnyAncestor(hasContentDescription("Orion"))
     val codeViewport = composeRule.onNode(hasScrollToNodeAction() and insideMessage, useUnmergedTree = true)
     val transcript = composeRule.onNode(hasScrollToNodeAction() and insideMessage.not(), useUnmergedTree = true)
     val jump = composeRule.onNode(hasContentDescription("Jump to latest") and hasClickAction())
@@ -1377,7 +1377,7 @@ class ChatFullMessageOwnershipLayoutTest {
       val labels = listOf(FULL_MESSAGE_IMAGE, FULL_MESSAGE_FIRST_CHAT, FULL_MESSAGE_FILE, FULL_MESSAGE_MEDIA_TEXT, FULL_MESSAGE_AUDIO)
       val tops =
         labels.map { label ->
-          val matcher = hasText(label, substring = true) and hasAnyAncestor(hasContentDescription("OpenClaw"))
+          val matcher = hasText(label, substring = true) and hasAnyAncestor(hasContentDescription("Orion"))
           composeRule.onAllNodes(matcher, useUnmergedTree = true).assertCountEquals(1)
           composeRule
             .onNode(matcher, useUnmergedTree = true)
@@ -1387,7 +1387,7 @@ class ChatFullMessageOwnershipLayoutTest {
       assertTrue("Expansion must preserve image/text/file/text/history-audio order without duplicates", tops.all { it.isFinite() } && tops.zipWithNext().all { (before, after) -> before < after })
       composeRule.onAllNodes(hasContentDescription("Play audio") and hasClickAction()).assertCountEquals(1)
       labels.forEach { label ->
-        composeRule.onNode(hasText(label, substring = true) and hasAnyAncestor(hasContentDescription("OpenClaw")), useUnmergedTree = true).performScrollTo().assertIsDisplayed()
+        composeRule.onNode(hasText(label, substring = true) and hasAnyAncestor(hasContentDescription("Orion")), useUnmergedTree = true).performScrollTo().assertIsDisplayed()
       }
     }
 
@@ -1539,7 +1539,7 @@ class ChatFullMessageOwnershipLayoutTest {
 
   private fun openMessageActions() {
     composeRule
-      .onNode(hasContentDescription("OpenClaw") and hasText("An ordinary paragraph", substring = true))
+      .onNode(hasContentDescription("Orion") and hasText("An ordinary paragraph", substring = true))
       .performSemanticsAction(SemanticsActions.OnLongClick) { it() }
   }
 
@@ -1758,7 +1758,7 @@ class ChatFullMessageOwnershipLayoutTest {
     expected: String = gateway.fullText(runtime.chat.sessionKey.value),
   ) {
     assertTrue("View all must expand the transcript bubble without opening a dialog", composeRule.onAllNodes(isDialog()).fetchSemanticsNodes().isEmpty())
-    val assistant = hasAnyAncestor(hasContentDescription("OpenClaw"))
+    val assistant = hasAnyAncestor(hasContentDescription("Orion"))
     val firstParagraph = expected.substringBefore("\n\n").trimEnd()
     val inlineTail = hasText(tail, substring = true) and assistant
     composeRule.waitUntil(FULL_MESSAGE_READY_TIMEOUT_MS) {
@@ -1772,8 +1772,8 @@ class ChatFullMessageOwnershipLayoutTest {
   }
 
   private fun assertInlineCollapsed(tail: String = FULL_MESSAGE_TAIL) {
-    composeRule.onNode(hasText(tail, substring = true) and hasAnyAncestor(hasContentDescription("OpenClaw")), useUnmergedTree = true).assertDoesNotExist()
-    composeRule.onNode(hasText("...(truncated)...", substring = true) and hasAnyAncestor(hasContentDescription("OpenClaw")), useUnmergedTree = true).assertExists()
+    composeRule.onNode(hasText(tail, substring = true) and hasAnyAncestor(hasContentDescription("Orion")), useUnmergedTree = true).assertDoesNotExist()
+    composeRule.onNode(hasText("...(truncated)...", substring = true) and hasAnyAncestor(hasContentDescription("Orion")), useUnmergedTree = true).assertExists()
     composeRule.onNodeWithText("Show less").assertDoesNotExist()
     composeRule.onNode(isDialog()).assertDoesNotExist()
   }
@@ -1783,7 +1783,7 @@ class ChatFullMessageOwnershipLayoutTest {
   }
 
   private fun assertInlineTailDisplayed(tail: String) {
-    val target = composeRule.onNode(hasText(tail, substring = true) and hasAnyAncestor(hasContentDescription("OpenClaw")), useUnmergedTree = true)
+    val target = composeRule.onNode(hasText(tail, substring = true) and hasAnyAncestor(hasContentDescription("Orion")), useUnmergedTree = true)
     target.performScrollTo().assertIsDisplayed()
     val layouts = mutableListOf<TextLayoutResult>()
     target.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { action -> assertTrue(action(layouts)) }
@@ -1820,11 +1820,11 @@ class ChatFullMessageOwnershipLayoutTest {
       .assertIsEnabled()
       .performClick()
     // Bring the bounded code viewport into the transcript viewport using public scrolling.
-    composeRule.onNode(hasScrollToNodeAction() and hasAnyAncestor(hasContentDescription("OpenClaw")), useUnmergedTree = true).performScrollTo().assertIsDisplayed()
+    composeRule.onNode(hasScrollToNodeAction() and hasAnyAncestor(hasContentDescription("Orion")), useUnmergedTree = true).performScrollTo().assertIsDisplayed()
   }
 
   private fun scrollToOriginalMessage() {
-    composeRule.onNode(hasScrollToNodeAction()).performScrollToNode(hasContentDescription("OpenClaw") and hasText("An ordinary paragraph", substring = true))
+    composeRule.onNode(hasScrollToNodeAction()).performScrollToNode(hasContentDescription("Orion") and hasText("An ordinary paragraph", substring = true))
   }
 
   private fun awaitSelectionText(expected: String) {
@@ -1861,7 +1861,7 @@ class ChatFullMessageOwnershipLayoutTest {
   }
 
   private fun assertExpandedTextAbsent(tail: String = FULL_MESSAGE_TAIL) {
-    composeRule.onNode(hasText(tail, substring = true) and hasAnyAncestor(hasContentDescription("OpenClaw")), useUnmergedTree = true).assertDoesNotExist()
+    composeRule.onNode(hasText(tail, substring = true) and hasAnyAncestor(hasContentDescription("Orion")), useUnmergedTree = true).assertDoesNotExist()
     composeRule.onNode(isDialog()).assertDoesNotExist()
     composeRule.runOnIdle {
       assertTrue("No retired selection buffer may remain in an attached window", nativeReaders().isEmpty())

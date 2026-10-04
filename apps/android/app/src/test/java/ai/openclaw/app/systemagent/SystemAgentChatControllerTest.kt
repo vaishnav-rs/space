@@ -170,7 +170,7 @@ class SystemAgentChatControllerTest {
           .isEmpty(),
       )
       assertEquals(
-        "The Gateway connection changed. Restart OpenClaw to reconnect.",
+        "The Gateway connection changed. Restart Orion to reconnect.",
         harness.controller.state.value.errorText,
       )
     }
@@ -256,7 +256,7 @@ class SystemAgentChatControllerTest {
       advanceUntilIdle()
 
       assertEquals(
-        "The Gateway connection changed. Restart OpenClaw to reconnect.",
+        "The Gateway connection changed. Restart Orion to reconnect.",
         harness.controller.state.value.errorText,
       )
       assertFalse(
@@ -442,7 +442,7 @@ class SystemAgentChatControllerTest {
       "question": {
         "id": "connection",
         "header": "Connection",
-        "question": "How should OpenClaw connect?",
+        "question": "How should Orion connect?",
         "options": [
           {
             "label": "Use Tailscale",

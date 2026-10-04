@@ -18,7 +18,7 @@ import ai.openclaw.app.sanitizeSidebarPageOrder
 import ai.openclaw.app.ui.design.ClawColors
 import ai.openclaw.app.ui.design.ClawIcons
 import ai.openclaw.app.ui.design.ClawTheme
-import ai.openclaw.app.ui.design.OpenClawMascot
+import ai.openclaw.app.ui.design.OrionMark
 import ai.openclaw.app.ui.design.ProviderBrandIcon
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -623,9 +623,9 @@ internal fun OpenClawSidebar(
           modifier = Modifier.weight(1f),
         )
       } else {
-        OpenClawMascot(modifier = Modifier.size(28.dp))
+        OrionMark(modifier = Modifier.size(28.dp))
         Text(
-          text = "OpenClaw",
+          text = "Orion",
           modifier = Modifier.weight(1f),
           style = ClawTheme.type.title,
           color = palette.text,

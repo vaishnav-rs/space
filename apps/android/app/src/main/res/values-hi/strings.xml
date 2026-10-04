@@ -1,5 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">OpenClaw Node</string>
+    <string name="app_name">Orion</string>
     <string name="trust_this_gateway">इस गेटवे पर भरोसा करें?</string>
     <string name="trust_and_continue">भरोसा करें और जारी रखें</string>
     <string name="cancel">रद्द करें</string>
@@ -16,8 +16,8 @@
     <string name="about_build_date_accessibility">बिल्ड की तारीख %1$s</string>
     <string name="about_build_copy_commit">पूरा Git कमिट हैश कॉपी करें</string>
     <string name="about_build_copy_timestamp">पूरा बिल्ड टाइमस्टैम्प कॉपी करें</string>
-    <string name="about_build_commit_clipboard_label">OpenClaw Git कमिट</string>
-    <string name="about_build_timestamp_clipboard_label">OpenClaw बिल्ड टाइमस्टैम्प</string>
+    <string name="about_build_commit_clipboard_label">Orion Git कमिट</string>
+    <string name="about_build_timestamp_clipboard_label">Orion बिल्ड टाइमस्टैम्प</string>
     <string name="about_build_commit_copied">Git कमिट कॉपी किया गया</string>
     <string name="about_build_timestamp_copied">बिल्ड टाइमस्टैम्प कॉपी किया गया</string>
 </resources>

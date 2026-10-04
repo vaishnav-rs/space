@@ -214,19 +214,19 @@ class ChatMessageViewsTest {
     val userBubble = composeRule.onNode(hasContentDescription("You") and hasText("user body")).assertExists()
     composeRule.onNode(hasContentDescription("Alex (Slack)") and hasText("peer body")).assertExists()
     composeRule.onNodeWithText("Alex (Slack)", useUnmergedTree = true).assertIsDisplayed()
-    val assistantBubble = composeRule.onNode(hasContentDescription("OpenClaw") and hasText("assistant body")).assertExists()
+    val assistantBubble = composeRule.onNode(hasContentDescription("Orion") and hasText("assistant body")).assertExists()
     composeRule.onNode(hasContentDescription("System") and hasText("system body")).assertExists()
-    composeRule.onNode(hasContentDescription("OpenClaw") and hasText("live body")).assertExists()
+    composeRule.onNode(hasContentDescription("Orion") and hasText("live body")).assertExists()
     listOf(userBubble, assistantBubble).forEach { bubble ->
       val semantics = bubble.fetchSemanticsNode().config
       assertTrue(semantics.isMergingSemanticsOfDescendants)
       assertTrue(SemanticsActions.OnLongClick in semantics)
     }
     composeRule.onAllNodesWithText("You", useUnmergedTree = true).assertCountEquals(0)
-    composeRule.onAllNodesWithText("OpenClaw", useUnmergedTree = true).assertCountEquals(0)
+    composeRule.onAllNodesWithText("Orion", useUnmergedTree = true).assertCountEquals(0)
     composeRule.onAllNodesWithText("Spoofed sender", useUnmergedTree = true).assertCountEquals(0)
     composeRule.onAllNodesWithText("System", useUnmergedTree = true).assertCountEquals(1)
-    composeRule.onAllNodesWithText("OpenClaw · Live", useUnmergedTree = true).assertCountEquals(1)
+    composeRule.onAllNodesWithText("Orion · Live", useUnmergedTree = true).assertCountEquals(1)
 
     userBubble.performSemanticsAction(SemanticsActions.OnLongClick) { action -> action() }
     listOf("Select text", "Reply", "Rewind to here", "Fork from here").forEach { label ->
@@ -293,7 +293,7 @@ class ChatMessageViewsTest {
     }
 
     listOf("assistant.pdf", "unpersisted.pdf", "disabled.pdf").forEach { fileName ->
-      val speaker = if (fileName == "assistant.pdf") "OpenClaw" else "You"
+      val speaker = if (fileName == "assistant.pdf") "Orion" else "You"
       val semantics =
         composeRule
           .onNode(hasContentDescription(speaker) and hasText(fileName))
@@ -523,7 +523,7 @@ class ChatMessageViewsTest {
       for (nextPhase in 0..2) {
         composeRule.runOnIdle { phase.value = nextPhase }
         val row = composeRule.onNodeWithTag("assistant-row").fetchSemanticsNode().boundsInRoot
-        val bubble = composeRule.onNode(hasContentDescription("OpenClaw"))
+        val bubble = composeRule.onNode(hasContentDescription("Orion"))
         val bounds = bubble.assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         assertTrue("Phase $nextPhase: content fits the transcript", bounds.width <= row.width)
         assertEquals("Phase $nextPhase: leading edge", row.left, bounds.left, 1f)
@@ -628,7 +628,7 @@ class ChatMessageViewsTest {
       ).assertExists()
     composeRule
       .onNode(
-        hasContentDescription("OpenClaw") and
+        hasContentDescription("Orion") and
           hasAnyDescendant(hasContentDescription("Play audio") and hasClickAction()),
       ).assertExists()
   }
@@ -677,7 +677,7 @@ class ChatMessageViewsTest {
     }
 
     composeRule
-      .onNode(hasContentDescription("OpenClaw") and hasText("quarterly-report.pdf"))
+      .onNode(hasContentDescription("Orion") and hasText("quarterly-report.pdf"))
       .assertIsDisplayed()
     assertEquals(0, artifactRequests)
   }
@@ -732,7 +732,7 @@ class ChatMessageViewsTest {
       }
     }
 
-    composeRule.onNode(hasContentDescription("OpenClaw") and hasText("Attachment")).assertIsDisplayed()
+    composeRule.onNode(hasContentDescription("Orion") and hasText("Attachment")).assertIsDisplayed()
     (1..4).forEach { index -> composeRule.onNodeWithText("redacted-$index.png").assertIsDisplayed() }
     composeRule.onAllNodesWithText("redacted-5.png").assertCountEquals(0)
     composeRule.onNodeWithText("Next images").assertIsDisplayed().performClick()

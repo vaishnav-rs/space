@@ -56,7 +56,7 @@ class OnDeviceGateway(
   private val context: Context,
   private val scope: CoroutineScope,
 ) {
-  val layout = OnDeviceLayout(File(context.filesDir, "orion"), File(context.applicationInfo.nativeLibraryDir))
+  val layout = OnDeviceLayout(File(context.filesDir, "orion"), File(context.applicationInfo.nativeLibraryDir.orEmpty()))
   private val prefs = context.getSharedPreferences("orion_ondevice", Context.MODE_PRIVATE)
   private val mutableState = MutableStateFlow<OnDeviceState>(unsupportedReason()?.let(OnDeviceState::Unsupported) ?: OnDeviceState.Stopped)
   val state: StateFlow<OnDeviceState> = mutableState

@@ -6139,7 +6139,7 @@ class ChatController internal constructor(
             if (ack.isTerminalSuccess) {
               refreshCurrentHistoryBestEffort(runIdsToReconcile = setOf(actualRunId))
             } else {
-              updateLocalizedErrorText(nativeText("OpenClaw request failed."))
+              updateLocalizedErrorText(nativeText("Orion request failed."))
             }
           }
         }

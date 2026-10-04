@@ -319,11 +319,11 @@ internal class SystemAgentChatController(
           val message =
             err.gatewayError.message
               .trim()
-              .ifEmpty { nativeString("OpenClaw request failed.") }
+              .ifEmpty { nativeString("Orion request failed.") }
           commitRequestError(requestGeneration, lease, message)
         } catch (_: Throwable) {
           if (!isCurrent(requestGeneration)) return@launch
-          commitRequestError(requestGeneration, lease, nativeString("OpenClaw request failed."))
+          commitRequestError(requestGeneration, lease, nativeString("Orion request failed."))
         }
       }
   }
@@ -448,4 +448,4 @@ private fun SystemAgentGatewayAccess.toChatAccess(): SystemAgentChatAccess =
     else -> SystemAgentChatAccess.Ready
   }
 
-private fun routeChangedMessage(): String = nativeString("The Gateway connection changed. Restart OpenClaw to reconnect.")
+private fun routeChangedMessage(): String = nativeString("The Gateway connection changed. Restart Orion to reconnect.")

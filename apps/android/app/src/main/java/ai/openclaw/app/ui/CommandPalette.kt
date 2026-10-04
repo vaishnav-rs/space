@@ -123,7 +123,7 @@ internal fun CommandPalette(
           ClawTextField(
             value = query,
             onValueChange = { query = it },
-            placeholder = nativeString("Search OpenClaw"),
+            placeholder = nativeString("Search Orion"),
             modifier = Modifier.focusRequester(searchFocusRequester),
           )
         }
@@ -198,7 +198,7 @@ internal fun commandItems(
         }
 
         CommandAction.Voice -> {
-          CommandItem(action, nativeText("Start Voice"), nativeText("Talk or dictate with OpenClaw"), ClawIcons.Mic)
+          CommandItem(action, nativeText("Start Voice"), nativeText("Talk or dictate with Orion"), ClawIcons.Mic)
         }
 
         CommandAction.Sessions -> {
@@ -307,7 +307,7 @@ private fun CommandSessionListRow(
       CommandRowIcon(icon = ClawIcons.Chat)
       Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
         Text(text = sessionPresentationTitle(row) { nativeString("Main thread") }, style = ClawTheme.type.body, color = ClawTheme.colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(text = sessionListSubtitle(row, fallback = nativeString("OpenClaw thread"), activeRunLabel = nativeString("Assistant working")), style = ClawTheme.type.caption, color = ClawTheme.colors.textSubtle, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text = sessionListSubtitle(row, fallback = nativeString("Orion thread"), activeRunLabel = nativeString("Assistant working")), style = ClawTheme.type.caption, color = ClawTheme.colors.textSubtle, maxLines = 1, overflow = TextOverflow.Ellipsis)
       }
       Text(text = row.updatedAtMs?.let(::relativeSessionTime) ?: nativeString("now"), style = ClawTheme.type.caption, color = ClawTheme.colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
       CommandRowChevron(contentDescription = nativeString("Open thread"))

@@ -31,7 +31,7 @@ internal enum class SettingsRoute(
   Usage(nativeText("Usage"), ClawIcons.Usage, SettingsCategory.Workspace),
   Skills(nativeText("Skills"), ClawIcons.Skills, SettingsCategory.Workspace),
   SkillWorkshop(nativeText("Skill Workshop"), ClawIcons.SkillWorkshop, SettingsCategory.Workspace),
-  SystemAgent(nativeText("OpenClaw"), ClawIcons.OpenClaw, null),
+  SystemAgent(nativeText("Orion"), ClawIcons.OpenClaw, null),
   NodesDevices(nativeText("Nodes & Devices"), ClawIcons.Devices, SettingsCategory.Connection),
   Channels(nativeText("Channels"), ClawIcons.Channels, SettingsCategory.Connection),
   OnDevice(nativeText("On this phone"), ClawIcons.Gateway, SettingsCategory.Connection),

@@ -322,7 +322,7 @@ class SettingsDetailInsetsTest {
       assertOverflow()
 
       send("Continue setup", requestIndex = 1)
-      assertAtLatest("OpenClaw is working…")
+      assertAtLatest("Orion is working…")
       releaseReplies[1].countDown()
       awaitReply(reply)
       assertOverflow()
@@ -337,7 +337,7 @@ class SettingsDetailInsetsTest {
 
       send("Continue without a question", requestIndex = 2)
       keyboard(320)
-      assertAtLatest("OpenClaw is working…")
+      assertAtLatest("Orion is working…")
       keyboard(0)
       releaseReplies[2].countDown()
       awaitReply(plainReply)
@@ -432,8 +432,8 @@ class SettingsDetailInsetsTest {
           .single()
       send("Continue", requestIndex = 1)
       keyboard(0)
-      val working = composeRule.onNodeWithText("OpenClaw is working…")
-      history.performScrollToNode(hasText("OpenClaw is working…"))
+      val working = composeRule.onNodeWithText("Orion is working…")
+      history.performScrollToNode(hasText("Orion is working…"))
       working.assertIsDisplayed()
       positionAtViewportBottom(working, (history.getUnclippedBoundsInRoot().bottom - working.getUnclippedBoundsInRoot().top).value / 2)
       assertAwayFromLatest()
@@ -496,7 +496,7 @@ class SettingsDetailInsetsTest {
 
       releaseReplies[1].countDown()
       awaitReply(reply)
-      composeRule.onNodeWithText("OpenClaw is working…").assertDoesNotExist()
+      composeRule.onNodeWithText("Orion is working…").assertDoesNotExist()
       assertEquals(
         retainedMessage,
         runtime.systemAgentChatController.state.value.messages
@@ -680,7 +680,7 @@ class SettingsDetailInsetsTest {
         send("Continue", requestIndex = 1)
         val anchor = composeRule.onNodeWithText("Ready to continue")
         val user = composeRule.onNodeWithText("Continue")
-        val working = composeRule.onNodeWithText("OpenClaw is working…")
+        val working = composeRule.onNodeWithText("Orion is working…")
         anchor.assertIsDisplayed()
         user.assertIsDisplayed()
         working.assertIsDisplayed()

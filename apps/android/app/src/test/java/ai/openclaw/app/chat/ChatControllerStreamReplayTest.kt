@@ -273,7 +273,7 @@ class ChatControllerStreamReplayTest {
             assertEquals(status, 1, controller.pendingRunCount.value)
             assertEquals(status, "Original output", controller.streamingAssistantText.value)
             assertEquals(status, originalTools, controller.pendingToolCalls.value)
-            if (status != "ok") assertEquals("OpenClaw request failed.", controller.errorText.value)
+            if (status != "ok") assertEquals("Orion request failed.", controller.errorText.value)
           } finally {
             release.complete(Unit)
           }
@@ -1166,7 +1166,7 @@ class ChatControllerStreamReplayTest {
       try {
         controller.load(key)
         runCurrent()
-        controller.onGatewayConnected(MainSessionBinding(key, "OpenClaw App"))
+        controller.onGatewayConnected(MainSessionBinding(key, "Orion App"))
         runCurrent()
         assertTrue(adoptionStarted.isCompleted)
         assertFalse(controller.patchSession(key = key, label = "Renamed"))
