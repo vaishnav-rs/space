@@ -249,7 +249,7 @@ class OnDeviceGateway(
             reader.cancel()
             process = null
             if (stopRequested) break
-            val tail = mutableLog.value.filter { it.isNotBlank() }.takeLast(8).joinToString("\n").take(900)
+            val tail = mutableLog.value.filter { it.isNotBlank() }.takeLast(40).joinToString("\n").take(3500)
             val failed = "The gateway stopped (exit $code). Restarting…\n$tail"
             appendLog(failed)
             mutableState.value = OnDeviceState.Failed(failed)
@@ -261,7 +261,7 @@ class OnDeviceGateway(
           }
           attempt++
           if (attempt >= 6) {
-            val last = mutableLog.value.filter { it.isNotBlank() }.takeLast(8).joinToString("\n").take(900)
+            val last = mutableLog.value.filter { it.isNotBlank() }.takeLast(40).joinToString("\n").take(3500)
             appendLog("Giving up after $attempt failed starts. Tap Run Orion on this phone to try again.")
             mutableState.value = OnDeviceState.Failed("The gateway stopped $attempt times in a row, so it was not restarted again.\n$last")
             return@launch
