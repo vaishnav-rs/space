@@ -132,25 +132,47 @@ class OnDeviceGateway(
     mutableLog.value = (mutableLog.value + line).takeLast(LOG_LINES)
   }
 
+  /**
+   * Opens a bundled archive. AssetManager is tried first; if it refuses (large or oddly packaged entries),
+   * the APK is read directly as a zip. When both fail the error lists what the APK really contains.
+   */
+  private fun openBundled(name: String): java.io.InputStream {
+    runCatching { return context.assets.open("$ASSET_DIR/$name") }
+    val apk = java.util.zip.ZipFile(context.applicationInfo.sourceDir)
+    val entry = apk.getEntry("assets/$ASSET_DIR/$name")
+    if (entry != null) {
+      val input = apk.getInputStream(entry)
+      return object : java.io.FilterInputStream(input) {
+        override fun close() {
+          super.close()
+          apk.close()
+        }
+      }
+    }
+    val present = apk.entries().asSequence().filter { it.name.contains(ASSET_DIR) || it.name.startsWith("lib/") }.joinToString { "${it.name} (${it.size / 1_000_000} MB)" }
+    apk.close()
+    error("$name is not in this APK. Found: ${present.ifEmpty { "nothing from the runtime" }}")
+  }
+
   /** Unpacks the runtime libraries and the gateway when their bundled version changed. Idempotent. */
   suspend fun prepare() =
     withContext(Dispatchers.IO) {
       unsupportedReason()?.let { error(it) }
       for (dir in listOf(layout.home, layout.tmp, layout.binDir, layout.gitCoreDir, layout.gitTemplates, layout.stateDir, layout.openclawStateDir, layout.workspacesDir, layout.agentWorkspace, File(layout.home, ".ssh"))) dir.mkdirs()
-      val manifest = runCatching { context.assets.open("$ASSET_DIR/runtime.json").bufferedReader().readText() }.getOrNull() ?: error("Runtime manifest missing from this build.")
+      val manifest = runCatching { openBundled("runtime.json").bufferedReader().use { it.readText() } }.getOrElse { error("Runtime manifest missing from this build: ${it.message}") }
       val runtimeVersion = JSONObject(manifest).optString("libsSha256")
       if (File(layout.runtimeDir, ".version").takeIf { it.exists() }?.readText() != runtimeVersion) {
         mutableState.value = OnDeviceState.Installing("Unpacking runtime libraries")
         layout.runtimeDir.deleteRecursively()
-        context.assets.open("$ASSET_DIR/libs.tar.gz").use { TarGz.extract(it, layout.runtimeDir) }
+        openBundled("libs.tar.gz").use { TarGz.extract(it, layout.runtimeDir) }
         File(layout.runtimeDir, ".version").writeText(runtimeVersion)
       }
-      val gatewayVersion = runCatching { context.assets.open("$ASSET_DIR/gateway.version").bufferedReader().readText().trim() }.getOrNull() ?: error("Gateway bundle missing from this build.")
+      val gatewayVersion = runCatching { openBundled("gateway.version").bufferedReader().use { it.readText().trim() } }.getOrElse { error("Gateway bundle missing from this build: ${it.message}") }
       if (File(layout.gatewayDir, ".version").takeIf { it.exists() }?.readText() != gatewayVersion) {
         mutableState.value = OnDeviceState.Installing("Unpacking the gateway (first run takes a minute)")
         layout.gatewayDir.deleteRecursively()
         var count = 0
-        context.assets.open("$ASSET_DIR/gateway.tar.gz").use {
+        openBundled("gateway.tar.gz").use {
           TarGz.extract(it, layout.gatewayDir) {
             if (++count % 2000 == 0) mutableState.value = OnDeviceState.Installing("Unpacking the gateway ($count files)")
           }
@@ -215,7 +237,7 @@ class OnDeviceGateway(
             throw err
           } catch (err: Throwable) {
             appendLog("Error: ${err.message}")
-            mutableState.value = OnDeviceState.Failed(err.message ?: "Could not start the gateway.")
+            mutableState.value = OnDeviceState.Failed("${err::class.java.simpleName}: ${err.message ?: "could not start the gateway"}")
           }
           attempt++
           delay(minOf(60_000L, 3_000L shl minOf(attempt, 4)))
