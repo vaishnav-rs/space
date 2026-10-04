@@ -37,6 +37,7 @@ class OnDeviceTest {
     assertFalse(env.containsKey("LD_PRELOAD"))
     assertEquals("/data/orion/runtime/lib", env["LD_LIBRARY_PATH"])
     assertEquals("/data/orion/libexec/git-core", env["GIT_EXEC_PATH"])
+    assertTrue(env["NODE_OPTIONS"]!!.contains("/data/orion/gateway/android-shim.cjs"))
   }
 
   @Test
@@ -48,6 +49,42 @@ class OnDeviceTest {
     val lan = JSONObject(OnDevicePlan.configJson(layout, OnDeviceSettings(lan = true)))
     assertEquals("lan", lan.getJSONObject("gateway").getString("bind"))
   }
+
+  @Test
+  fun configMatchesTheSampleTheGatewayValidatorTestChecks() {
+    val sample = JSONObject(javaClass.getResource("/gateway-config.sample.json")!!.readText())
+    val actual = JSONObject(OnDevicePlan.configJson(layout, OnDeviceSettings(ownerWhatsapp = "+10000000000")))
+    // Only the workspace path differs by design (the sample uses a placeholder install root).
+    sample.getJSONObject("agents").getJSONObject("defaults").put("workspace", layout.agentWorkspace.path)
+    assertEquals("config drifted from gateway-config.sample.json", plain(sample), plain(actual))
+  }
+
+  @Test
+  fun mergeKeepsWhatTheGatewaySavedAndAppliesAppSettings() {
+    val saved =
+      """{"channels":{"whatsapp":{"allowFrom":["+1"]}},"gateway":{"port":1,"bind":"lan","customFlag":true},
+        "agents":{"defaults":{"workspace":"/old","model":{"primary":"x/y"},"heartbeat":{"every":"1h"}},
+        "entries":{"work":{"identity":{"name":"Work"}}}}}"""
+    val merged = JSONObject(OnDevicePlan.mergeConfig(saved, layout, OnDeviceSettings(ownerWhatsapp = "+971500000000", lan = false))!!)
+    assertEquals("+1", merged.getJSONObject("channels").getJSONObject("whatsapp").getJSONArray("allowFrom").getString(0))
+    assertEquals(true, merged.getJSONObject("gateway").getBoolean("customFlag"))
+    assertEquals("loopback", merged.getJSONObject("gateway").getString("bind"))
+    assertEquals(18789, merged.getJSONObject("gateway").getInt("port"))
+    assertEquals("whatsapp:+971500000000", merged.getJSONObject("commands").getJSONArray("ownerAllowFrom").getString(0))
+    val agents = merged.getJSONObject("agents")
+    assertEquals("x/y", agents.getJSONObject("defaults").getJSONObject("model").getString("primary"))
+    assertEquals("1h", agents.getJSONObject("defaults").getJSONObject("heartbeat").getString("every"))
+    assertTrue(agents.getJSONObject("entries").has("work"))
+    assertEquals(null, OnDevicePlan.mergeConfig("{ not: json5 // comment", layout, OnDeviceSettings()))
+  }
+
+  /** org.json values as plain maps, lists and scalars so structural equality works. */
+  private fun plain(value: Any?): Any? =
+    when (value) {
+      is JSONObject -> value.keys().asSequence().associateWith { plain(value.get(it)) }
+      is org.json.JSONArray -> (0 until value.length()).map { plain(value.get(it)) }
+      else -> value
+    }
 
   @Test
   fun generatedSecretsAreUniqueAndSized() {
@@ -99,6 +136,14 @@ class OnDeviceTest {
     assertEquals("echo", File(dest, "bin/run").readText())
     assertTrue(File(dest, "bin/run").canExecute())
     assertEquals("echo", File(dest, "bin/alias").readText())
+  }
+
+  @Test
+  fun tarKeepsHardLinks() {
+    val dest = tmp.newFolder("hard")
+    val archive = gz(tarEntry("a.txt", "same".toByteArray()), tarEntry("b.txt", ByteArray(0), '1', link = "a.txt"))
+    TarGz.extract(archive.inputStream(), dest)
+    assertEquals("same", File(dest, "b.txt").readText())
   }
 
   @Test

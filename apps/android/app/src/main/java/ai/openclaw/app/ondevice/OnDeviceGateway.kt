@@ -158,6 +158,11 @@ class OnDeviceGateway(
   suspend fun prepare() =
     withContext(Dispatchers.IO) {
       unsupportedReason()?.let { error(it) }
+      val needed = 1_800_000_000L
+      val firstRun = !File(layout.gatewayDir, ".version").exists() || !File(layout.runtimeDir, ".version").exists()
+      if (firstRun && context.filesDir.usableSpace < needed) {
+        error("Not enough free storage: the gateway needs about 1.8 GB free, ${context.filesDir.usableSpace / 1_000_000} MB available.")
+      }
       for (dir in listOf(layout.home, layout.tmp, layout.binDir, layout.gitCoreDir, layout.gitTemplates, layout.stateDir, layout.openclawStateDir, layout.workspacesDir, layout.agentWorkspace, File(layout.home, ".ssh"))) dir.mkdirs()
       val manifest = runCatching { openBundled("runtime.json").bufferedReader().use { it.readText() } }.getOrElse { error("Runtime manifest missing from this build: ${it.message}") }
       val runtimeVersion = JSONObject(manifest).optString("libsSha256")
@@ -189,7 +194,14 @@ class OnDeviceGateway(
       val persona = File(layout.gatewayDir, "personal/workspace")
       persona.listFiles()?.forEach { f -> File(layout.agentWorkspace, f.name).takeIf { !it.exists() }?.let { f.copyTo(it) } }
       val settings = settings()
-      layout.configFile.writeText(OnDevicePlan.configJson(layout, settings))
+      val merged = OnDevicePlan.mergeConfig(layout.configFile.takeIf { it.exists() }?.readText(), layout, settings)
+      if (merged != null) {
+        layout.configFile.writeText(merged)
+      } else {
+        // The gateway rewrote its config in a format this app does not edit (for example JSON5 with comments).
+        // Leave it exactly as it is; app settings that live in it can then only be changed from the gateway.
+        appendLog("openclaw.json is not plain JSON; leaving it unchanged.")
+      }
       File(layout.home, ".ssh/config").takeIf { !it.exists() }?.writeText("Host *\n  StrictHostKeyChecking accept-new\n  UserKnownHostsFile ${File(layout.home, ".ssh/known_hosts").path}\n  IdentityFile ${File(layout.home, ".ssh/id_ed25519").path}\n")
     }
 
@@ -203,6 +215,14 @@ class OnDeviceGateway(
           try {
             prepare()
             val settings = settings()
+            if (isPortOpen(settings.port)) {
+              // A gateway from an earlier app run is still alive (children can outlive a swiped-away app).
+              // Starting a second one would only fail on the port and the database, so adopt it.
+              appendLog("A gateway is already listening on port ${settings.port}; using it.")
+              mutableState.value = OnDeviceState.Running(settings.port, settings.lan)
+              while (isActive && !stopRequested && isPortOpen(settings.port)) delay(5_000)
+              continue
+            }
             mutableState.value = OnDeviceState.Starting
             val builder = ProcessBuilder(OnDevicePlan.command(layout, settings)).directory(layout.gatewayDir).redirectErrorStream(true)
             builder.environment().applyOrion(OnDevicePlan.environment(layout, secrets(), settings))
@@ -240,11 +260,19 @@ class OnDeviceGateway(
             mutableState.value = OnDeviceState.Failed("${err::class.java.simpleName}: ${err.message ?: "could not start the gateway"}")
           }
           attempt++
+          if (attempt >= 6) {
+            val last = mutableLog.value.filter { it.isNotBlank() }.takeLast(8).joinToString("\n").take(900)
+            appendLog("Giving up after $attempt failed starts. Tap Run Orion on this phone to try again.")
+            mutableState.value = OnDeviceState.Failed("The gateway stopped $attempt times in a row, so it was not restarted again.\n$last")
+            return@launch
+          }
           delay(minOf(60_000L, 3_000L shl minOf(attempt, 4)))
         }
         if (stopRequested) mutableState.value = OnDeviceState.Stopped
       }
   }
+
+  private fun isPortOpen(port: Int): Boolean = runCatching { Socket().use { it.connect(InetSocketAddress("127.0.0.1", port), 500) } }.isSuccess
 
   private suspend fun waitForPort(
     port: Int,

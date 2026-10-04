@@ -75,6 +75,16 @@ object TarGz {
           skip(input, padded)
         }
 
+        '1' -> {
+          // Hard link: the target was extracted earlier in the archive.
+          val source = File(root, link.trimStart('/')).canonicalFile
+          if (!source.path.startsWith(root.path + File.separator)) throw IOException("Unsafe link in archive: $link")
+          target.parentFile?.mkdirs()
+          source.copyTo(target, overwrite = true)
+          if (source.canExecute()) target.setExecutable(true, false)
+          skip(input, padded)
+        }
+
         '0', '\u0000' -> {
           target.parentFile?.mkdirs()
           target.outputStream().use { out ->
