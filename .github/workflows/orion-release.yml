@@ -145,6 +145,15 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      # The Android build generates its gateway protocol bindings with the repository's JavaScript tooling.
+      - run: pnpm install --no-frozen-lockfile
+
       - name: Unit tests
         working-directory: apps/android
         run: ./gradlew --no-daemon :app:testThirdPartyDebugUnitTest
