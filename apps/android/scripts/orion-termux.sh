@@ -13,11 +13,11 @@ APP_DIR="$HOME/orion"
 LOCAL=0; MODEL_ID="gemma-4-e2b"; START=1
 for arg in "$@"; do
   case "$arg" in
-    --local-model) LOCAL=1 ;;
+    --local-model|--local-mode|--local) LOCAL=1 ;;
     --local-model=gemma-4-e2b) LOCAL=1 ;;
     --local-model=*) echo "Unknown local model '${arg#*=}'. Supported: gemma-4-e2b"; exit 2 ;;
     --no-start) START=0 ;;
-    *) echo "Unknown option: $arg"; exit 2 ;;
+    *) echo "Unknown option: $arg. Options: --local-model (install Gemma 4 E2B), --no-start"; exit 2 ;;
   esac
 done
 step() { printf '\n==> %s\n' "$*"; }
