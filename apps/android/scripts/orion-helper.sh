@@ -4,6 +4,7 @@ set -uo pipefail
 ORION_HOME="${ORION_HOME:-$HOME/.orion}"
 APP_DIR="${ORION_APP_DIR:-$HOME/orion}"
 PORT="${ORION_PORT:-18790}"
+MODEL_PORT="${ORION_MODEL_PORT:-18791}"
 GW_PID="$ORION_HOME/gateway.pid"
 LLM_PID="$ORION_HOME/model.pid"
 
@@ -25,9 +26,15 @@ start() {
   if [ -f "$ORION_HOME/model.path" ] && ! alive "$LLM_PID"; then
     echo "Starting the local model…"
     nohup llama-server -m "$(cat "$ORION_HOME/model.path")" --alias "$(cat "$ORION_HOME/model.id")" \
-      --host 127.0.0.1 --port 8080 -c "${ORION_LOCAL_CTX:-32768}" --jinja -t "${ORION_LOCAL_THREADS:-4}" \
+      --host 127.0.0.1 --port "$MODEL_PORT" -c "${ORION_LOCAL_CTX:-32768}" --jinja -t "${ORION_LOCAL_THREADS:-4}" \
       >"$ORION_HOME/model.log" 2>&1 &
     echo $! >"$LLM_PID"
+    sleep 3
+    if ! alive "$LLM_PID"; then
+      rm -f "$LLM_PID"
+      echo "The local model failed to start. Its log:"; tail -n 15 "$ORION_HOME/model.log"
+      echo "(Orion still starts; replies will fail until the model runs. Fix it, then: orion restart)"
+    fi
   fi
   if alive "$GW_PID"; then echo "The gateway is already running."; else
     mkdir -p "$ORION_HOME"

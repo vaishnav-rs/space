@@ -10,7 +10,8 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const LOCAL_PROVIDER = "local-llama";
-export const LOCAL_PORT = 8080;
+// Not 8080: that port is commonly taken on phones (dev servers, other apps), and llama-server then fails to bind.
+export const LOCAL_PORT = 18791;
 
 export function baseConfig(workspace) {
   return {
