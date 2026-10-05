@@ -38,3 +38,17 @@ Tap **Set up and start**, fill in your email and WhatsApp number, add Google/Res
 Build it locally: `node apps/android/scripts/fetch-termux-runtime.mjs && apps/android/scripts/bundle-gateway.sh`, then build the `thirdParty` variant. The release workflow does both.
 
 Known limits: arm64 only; the terminal feature needs a PTY add-on that is not bundled for Android, so the in-app terminal may be unavailable on the phone gateway; Android may still stop background work on aggressive battery managers (use *Allow running in the background*); the Hewar loop (git, tests) runs on the phone's CPU and storage.
+
+## Termux: one command, optional local model
+
+For a gateway outside the app (or as a fallback), Termux (F-Droid build) runs the same gateway:
+
+```
+pkg upgrade -y && curl -fsSL https://raw.githubusercontent.com/vaishnav-rs/space/claude/new-work/apps/android/scripts/orion-termux.sh | bash
+```
+
+Add `-s -- --local-model` after `bash` to also install llama.cpp and Gemma 4 E2B (`ggml-org/gemma-4-E2B-it-GGUF`, Q4_0) and make it the default model. Re-running updates in place and keeps your data in `~/.orion`.
+
+The script installs Node, git and OpenSSH from Termux, downloads the newest release's gateway package, patches fs-safe for Android's missing hard links (`apps/android/scripts/patch-fs-safe.mjs`), writes a config validated by the gateway's own validator (`apps/android/scripts/termux-config.mjs`, tested in `src/orion/termux-config.test.ts`), and installs the `orion` command (`orion start|stop|status|logs|token|cli|boot on`). It listens on `127.0.0.1:18790`, so it never clashes with the in-app gateway on 18789. In the app choose *Set up manually* with that host, port, TLS off and the printed token.
+
+Local models need RAM: 8 GB or more is recommended, and the first run downloads several GB. Set `ORION_LOCAL_CTX` (default 32768) and `ORION_LOCAL_THREADS` (default 4) before `orion start` to tune it.
