@@ -104,6 +104,14 @@ internal fun isLocalCleartextGatewayHost(
   }
 }
 
+/**
+ * Manual setup only: the operator typed the host and chose plain ws://. A Tailscale address is also allowed there
+ * because Tailscale encrypts the hop itself (WireGuard). Setup codes, pasted QR payloads and discovery never use
+ * this rule and keep requiring TLS for anything that is not local.
+ */
+internal fun isCleartextAllowedForManualEntry(rawHost: String?): Boolean =
+  isLocalCleartextGatewayHost(rawHost) || (rawHost != null && isTailscaleGatewayHost(rawHost))
+
 private fun isAndroidEmulatorRuntime(): Boolean {
   val fingerprint = Build.FINGERPRINT?.lowercase(Locale.US).orEmpty()
   val model = Build.MODEL?.lowercase(Locale.US).orEmpty()

@@ -36,6 +36,15 @@ describe("Termux install config", () => {
     expect(config.agents.defaults.model.primary).toBe("local-llama/gemma-4-e2b");
   });
 
+  it("accepts the Tailscale bind settings written by `orion tailscale on`", () => {
+    const base = baseConfig("/w");
+    expectValid({ ...base, gateway: { ...base.gateway, bind: "tailnet" } });
+    expectValid({
+      ...base,
+      gateway: { ...base.gateway, bind: "custom", customBindHost: "100.101.102.103" },
+    });
+  });
+
   it("re-running keeps the user's settings and only adds what the install owns", () => {
     const existing = { ...baseConfig("/w"), gateway: { ...baseConfig("/w").gateway, port: 19000 } };
     const merged = mergeInto(existing, withLocalModel(baseConfig("/w"), gemma));

@@ -1,5 +1,6 @@
 package ai.openclaw.app.ui
 
+import ai.openclaw.app.gateway.isCleartextAllowedForManualEntry
 import ai.openclaw.app.gateway.isLocalCleartextGatewayHost
 import ai.openclaw.app.gateway.normalizeGatewayContextPath
 import ai.openclaw.app.i18n.NativeText
@@ -138,7 +139,7 @@ internal fun resolveGatewayConnectConfig(
   }
 
   val manualUrl = composeGatewayManualUrl(manualHostInput, manualPortInput, manualTlsInput) ?: return null
-  val parsed = parseGatewayEndpointResult(manualUrl).config ?: return null
+  val parsed = parseGatewayEndpointResult(manualUrl, allowManualCleartext = true).config ?: return null
   val token = tokenInput.trim()
   val bootstrapToken = bootstrapTokenInput.trim().takeIf { token.isEmpty() }.orEmpty()
   val password = passwordInput.trim().takeIf { token.isEmpty() && bootstrapToken.isEmpty() }.orEmpty()
@@ -210,7 +211,10 @@ private fun GatewayEndpointConfig.sameEndpoint(config: GatewayConnectConfig): Bo
 
 internal fun parseGatewayEndpoint(rawInput: String): GatewayEndpointConfig? = parseGatewayEndpointResult(rawInput).config
 
-internal fun parseGatewayEndpointResult(rawInput: String): GatewayEndpointParseResult {
+internal fun parseGatewayEndpointResult(
+  rawInput: String,
+  allowManualCleartext: Boolean = false,
+): GatewayEndpointParseResult {
   val raw = rawInput.trim()
   if (raw.isEmpty()) return GatewayEndpointParseResult(error = GatewayEndpointValidationError.INVALID_URL)
 
@@ -242,7 +246,8 @@ internal fun parseGatewayEndpointResult(rawInput: String): GatewayEndpointParseR
     return GatewayEndpointParseResult(error = GatewayEndpointValidationError.INVALID_URL)
   }
   val tls = scheme == "wss" || scheme == "https"
-  if (!tls && !isLocalCleartextGatewayHost(host)) {
+  val cleartextAllowed = if (allowManualCleartext) isCleartextAllowedForManualEntry(host) else isLocalCleartextGatewayHost(host)
+  if (!tls && !cleartextAllowed) {
     return GatewayEndpointParseResult(error = GatewayEndpointValidationError.INSECURE_REMOTE_URL)
   }
   val defaultPort = if (tls) 443 else 18789
@@ -482,10 +487,10 @@ internal fun gatewayManualTransportPresentation(
   }
 
   if (host.contains("://")) {
-    val config = parseGatewayEndpointResult(host).config
+    val config = parseGatewayEndpointResult(host, allowManualCleartext = true).config
     if (config != null) {
       return gatewayManualTransportPresentation(
-        requiresTls = !isLocalCleartextGatewayHost(config.host),
+        requiresTls = !isCleartextAllowedForManualEntry(config.host),
         effectiveTls = config.tls,
       )
     }
@@ -494,7 +499,7 @@ internal fun gatewayManualTransportPresentation(
   val normalizedHost =
     resolveGatewayManualAuthority(host)?.host?.trim('[', ']')
       ?: host.trimEnd('/')
-  val requiresTls = !isLocalCleartextGatewayHost(normalizedHost)
+  val requiresTls = !isCleartextAllowedForManualEntry(normalizedHost)
   val effectiveTls = requestedTls || requiresTls
   return gatewayManualTransportPresentation(
     requiresTls = requiresTls,

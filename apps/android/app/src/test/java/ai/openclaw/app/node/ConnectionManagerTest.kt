@@ -5,6 +5,7 @@ import ai.openclaw.app.LocationMode
 import ai.openclaw.app.SecurePrefs
 import ai.openclaw.app.gateway.GatewayEndpoint
 import ai.openclaw.app.gateway.GatewayTlsParams
+import ai.openclaw.app.gateway.isCleartextAllowedForManualEntry
 import ai.openclaw.app.gateway.isLocalCleartextGatewayHost
 import ai.openclaw.app.gateway.isLoopbackGatewayHost
 import ai.openclaw.app.protocol.OpenClawCallLogCommand
@@ -97,6 +98,22 @@ class ConnectionManagerTest {
 
   @Test
   fun resolveTlsParamsForEndpoint_manualMdnsRespectsManualTlsToggle() = assertNull(resolveManualTls("gateway.local"))
+
+  @Test
+  fun resolveTlsParamsForEndpoint_manualTailscaleRespectsManualTlsToggle() {
+    assertNull(resolveManualTls("100.64.0.9"))
+    assertNull(resolveManualTls("mydevice.tail1234.ts.net"))
+  }
+
+  @Test
+  fun isCleartextAllowedForManualEntry_addsTailscaleOnTopOfLocalHosts() {
+    assertTrue(isCleartextAllowedForManualEntry("192.168.1.20"))
+    assertTrue(isCleartextAllowedForManualEntry("100.64.0.9"))
+    assertTrue(isCleartextAllowedForManualEntry("mydevice.tail1234.ts.net"))
+    assertFalse(isCleartextAllowedForManualEntry("gateway.ts.net.evil.com"))
+    assertFalse(isCleartextAllowedForManualEntry("100.128.0.9"))
+    assertFalse(isCleartextAllowedForManualEntry("gateway.example"))
+  }
 
   @Test
   fun resolveTlsParamsForEndpoint_manualPrivateLanCleartextCanOverrideStoredPin() = assertNull(resolveManualTls(host = "192.168.1.20", storedFingerprint = "pinned"))

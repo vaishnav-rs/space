@@ -3,7 +3,7 @@ package ai.openclaw.app.gateway
 import java.net.InetAddress
 import java.util.Locale
 
-/** Route advice only: Tailscale-looking addresses never grant TLS or cleartext trust. */
+/** Tailscale-looking address. Never trusted for TLS; cleartext is allowed only through manual entry (see isCleartextAllowedForManualEntry). */
 internal fun isTailscaleGatewayHost(rawHost: String): Boolean {
   val host =
     rawHost

@@ -52,3 +52,9 @@ Add `-s -- --local-model` after `bash` to also install llama.cpp and Gemma 4 E2B
 The script installs Node, git and OpenSSH from Termux, downloads the newest release's gateway package, patches fs-safe for Android's missing hard links (`apps/android/scripts/patch-fs-safe.mjs`), writes a config validated by the gateway's own validator (`apps/android/scripts/termux-config.mjs`, tested in `src/orion/termux-config.test.ts`), and installs the `orion` command (`orion start|stop|status|logs|token|cli|boot on`). It listens on `127.0.0.1:18790`, so it never clashes with the in-app gateway on 18789; the local model uses `127.0.0.1:18791`. In the app choose *Set up manually* with that host, port, TLS off and the printed token.
 
 Local models need RAM: 8 GB or more is recommended, and the first run downloads several GB. Set `ORION_LOCAL_CTX` (default 32768) and `ORION_LOCAL_THREADS` (default 4) before `orion start` to tune it.
+
+### Reaching the phone from a laptop or another phone (Tailscale)
+
+Install Tailscale on the phone and on the other device, signed in to the same account, then in Termux run `orion tailscale on`. It binds the gateway to the phone's Tailscale address, restarts, checks that the address answers, and prints the host, port and token. `orion tailscale off` returns to this-phone-only; `orion tailscale status` shows the state. If Termux cannot read the address, pass it from the Tailscale app: `orion tailscale on 100.x.y.z`.
+
+Tailscale Serve (HTTPS on `*.ts.net`) needs the `tailscale` command-line tool on the gateway host, which Termux and the Tailscale Android app do not provide, so the phone uses a direct tailnet address instead. Tailscale encrypts that hop (WireGuard). The Orion app on another phone accepts a plain connection to a Tailscale address only from **Set up manually** with TLS off; setup codes, QR payloads and discovery still require TLS. A laptop browser can open `http://<tailscale address>:18790`.

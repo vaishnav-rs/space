@@ -71,6 +71,48 @@ status() {
   fi
 }
 
+# The phone's Tailscale IPv4 (100.64.0.0/10), read by Node. Empty when Tailscale is not connected.
+tailscale_ip() {
+  node -e 'for (const list of Object.values(require("os").networkInterfaces() || {})) for (const a of list || []) { const p = a.address.split("."); if (a.family === "IPv4" && p[0] === "100" && p[1] >= 64 && p[1] <= 127) { console.log(a.address); process.exit(0) } }' 2>/dev/null
+}
+set_bind() { # mode [custom-host]
+  node -e '
+const fs = require("fs"); const f = process.argv[1]; const c = JSON.parse(fs.readFileSync(f, "utf8"));
+c.gateway = { ...c.gateway, bind: process.argv[2] };
+if (process.argv[3]) c.gateway.customBindHost = process.argv[3]; else delete c.gateway.customBindHost;
+fs.writeFileSync(f, JSON.stringify(c, null, 2) + "\n");' "$ORION_HOME/openclaw.json" "$1" "${2:-}"
+}
+reachable() { node -e "fetch('http://$1:$PORT/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))" 2>/dev/null; }
+
+tailscale_cmd() {
+  case "${1:-status}" in
+    on)
+      ip="${2:-$(tailscale_ip)}"
+      if [ -z "$ip" ]; then
+        echo "No Tailscale address found. Open the Tailscale app, connect it, then run: orion tailscale on"
+        echo "(If it is connected, give the address from the app: orion tailscale on 100.x.y.z)"; return 1
+      fi
+      if [ -n "${2:-}" ]; then set_bind custom "$ip"; else set_bind tailnet; fi
+      stop; start || return 1
+      if reachable "$ip"; then
+        echo; echo "Orion is reachable over Tailscale."
+        echo "On your laptop or other phone (Tailscale connected), use:"
+        echo "  host: $ip   port: $PORT   token: $(cat "$ORION_HOME/token")   (TLS off: Tailscale already encrypts it)"
+        echo "Laptop browser: http://$ip:$PORT"
+      else
+        echo; echo "The gateway is up but does not answer on $ip. If Tailscale connected after the gateway started, run: orion restart"
+        echo "Otherwise bind it to the address explicitly: orion tailscale on $ip"; return 1
+      fi ;;
+    off) set_bind loopback; stop; start; echo "Back to this phone only (127.0.0.1)." ;;
+    status)
+      ip="$(tailscale_ip)"
+      echo "bind: $(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).gateway?.bind ?? "loopback")' "$ORION_HOME/openclaw.json")"
+      echo "tailscale address: ${ip:-not connected}"
+      if [ -n "$ip" ]; then if reachable "$ip"; then echo "reachable at $ip:$PORT"; else echo "not reachable at $ip:$PORT"; fi; fi ;;
+    *) echo "usage: orion tailscale on [100.x.y.z] | off | status" ;;
+  esac
+}
+
 case "${1:-status}" in
   start) start ;;
   stop) stop ;;
@@ -79,11 +121,12 @@ case "${1:-status}" in
   token) cat "$ORION_HOME/token" ;;
   logs) tail -n "${3:-60}" -f "$ORION_HOME/${2:-gateway}.log" ;;
   cli) shift; load_env; exec node "$APP_DIR/openclaw.mjs" "$@" ;;
+  tailscale) shift; tailscale_cmd "$@" ;;
   boot)
     case "${2:-}" in
       on) mkdir -p "$HOME/.termux/boot"; printf '#!/data/data/com.termux/files/usr/bin/sh\nexec orion start\n' >"$HOME/.termux/boot/orion"; chmod +x "$HOME/.termux/boot/orion"; echo "Orion will start after a reboot (needs the Termux:Boot app from F-Droid, opened once)." ;;
       off) rm -f "$HOME/.termux/boot/orion"; echo "Boot start removed." ;;
       *) echo "usage: orion boot on|off" ;;
     esac ;;
-  *) echo "usage: orion start|stop|restart|status|token|logs [gateway|model]|cli <openclaw args>|boot on|off" ;;
+  *) echo "usage: orion start|stop|restart|status|token|logs [gateway|model]|cli <openclaw args>|tailscale on|off|status|boot on|off" ;;
 esac

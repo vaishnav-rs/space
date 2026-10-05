@@ -1,6 +1,7 @@
 package ai.openclaw.app.ui
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -73,7 +74,10 @@ class GatewayConfigResolverTest {
         "[::1]:18790" to false,
         "gateway.example:443" to true,
         "gateway.local.evil.com:18790" to true,
-        "100.64.0.9:18790" to true,
+        // Manual entry may use plain ws:// to a Tailscale address (Tailscale encrypts the hop itself).
+        "100.64.0.9:18790" to false,
+        "mydevice.tail1234.ts.net:18790" to false,
+        "100.128.0.9:18790" to true,
         "[2001:db8::1]:443" to true,
       )
 
@@ -141,6 +145,14 @@ class GatewayConfigResolverTest {
   @Test
   fun parseGatewayEndpointRejectsTailnetCleartextWsUrls() {
     assertEndpointRejected("ws://100.64.0.9:18789")
+  }
+
+  @Test
+  fun manualEntryAcceptsPlainWsToTailscaleButNotToOtherRemoteHosts() {
+    assertNotNull(parseGatewayEndpointResult("ws://100.64.0.9:18790", allowManualCleartext = true).config)
+    assertNotNull(parseGatewayEndpointResult("ws://mydevice.tail1234.ts.net:18790", allowManualCleartext = true).config)
+    assertNull(parseGatewayEndpointResult("ws://gateway.example:18790", allowManualCleartext = true).config)
+    assertNull(parseGatewayEndpointResult("ws://100.128.0.9:18790", allowManualCleartext = true).config)
   }
 
   @Test
