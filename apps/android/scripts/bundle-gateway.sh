@@ -16,13 +16,15 @@ cd "$STAGE/pkg"
 # Production dependencies only. Native add-ons prebuilt for desktop Linux are useless on Android, so
 # no install scripts and no optional packages (sqlite-vec, platform PTY binaries).
 npm install --omit=dev --omit=optional --ignore-scripts --legacy-peer-deps --no-audit --no-fund
+# Android refuses hard links; make fs-safe's copy publication fall back to a rename (see the script).
+node "$ROOT/apps/android/scripts/patch-fs-safe.mjs" "$STAGE/pkg"
 mkdir -p personal
 cp -r "$ROOT/personal/workspace" personal/workspace
 cp "$ROOT/apps/android/runtime/android-shim.cjs" android-shim.cjs
 # Smoke test the staged bundle with the build machine's Node before it is shipped.
 node openclaw.mjs --version
 # Start the gateway exactly as the phone does (same config shape, same environment variables, the Android
-# shim preloaded) and require it to listen. A start-up failure here would also happen on the phone, and its
+# shim preloaded, hard links denied and no native fs-safe helper, as on Android) and require it to listen. A start-up failure here would also happen on the phone, and its
 # log shows up in the CI output instead of on a device.
 SMOKE="$STAGE/smoke"
 rm -rf "$SMOKE"
@@ -31,7 +33,7 @@ sed "s#/data/orion/agent-workspace#$SMOKE/agent-workspace#" "$ROOT/apps/android/
 echo '{"id":"personal","name":"Personal","kind":"personal","policy":{"grant":["filesystem.read","knowledge.read"],"requireApproval":[]}}' > "$SMOKE/workspaces/personal.json"
 PORT=18789
 env -i PATH="$PATH" HOME="$SMOKE/home" TMPDIR="$SMOKE/tmp" \
-  NODE_OPTIONS="--require=$STAGE/pkg/android-shim.cjs" \
+  NODE_OPTIONS="--require=$STAGE/pkg/android-shim.cjs --require=$ROOT/apps/android/runtime/deny-links.cjs" FS_SAFE_NATIVE_MODE=off \
   OPENCLAW_STATE_DIR="$SMOKE/openclaw" OPENCLAW_CONFIG_PATH="$SMOKE/openclaw.json" OPENCLAW_GATEWAY_TOKEN=smoke-token \
   ORION_STATE_DIR="$SMOKE/state" ORION_WORKSPACES_DIR="$SMOKE/workspaces" ORION_VAULT_KEY="$(openssl rand -base64 32)" \
   ORION_DEFAULT_REQUESTER=owner OPENCLAW_DEBUG=1 \
